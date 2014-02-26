@@ -17,7 +17,7 @@
 #include <Shlwapi.h>
 #include <process.h>
 #include <vector>
-//#include <ctime>
+#include <ctime>
 
 #include "files.h"
 #include "whff.h"
@@ -30,14 +30,26 @@
 #define WINDOWTITLE	"svchost"
 #define ICON_MESSAGE (WM_USER + 1)
 
+#define NOTNOW 0
+#define WAITING 1
+#define DRAGGING 2
+
 namespace FrogLies{
 
     bool running;
     HHOOK kbdhook;
+    HHOOK mouhook;
     HWND hwnd;
     NOTIFYICONDATA nid;
     HICON IconA;
     HICON IconB;
+
+    char clickDrag;     //States are NOTNOW, WAITING, DRAGGING.
+    POINT dragStart;
+    POINT dragEnd;
+    POINT coords;
+    HCURSOR dragCursor;
+    HCURSOR dfltCursor;
 
     void CheckKeys();
 
@@ -55,8 +67,6 @@ namespace FrogLies{
         return keyspressed[key];
     }
 
-
-
     void SetClipboard( std::string text ) {
         if(OpenClipboard(NULL)) {
             HGLOBAL clipbuffer;
@@ -71,9 +81,44 @@ namespace FrogLies{
         }
     }
 
+    LRESULT CALLBACK handlemouse(int code, WPARAM wp, LPARAM lp){
+        if (clickDrag){
+            if ((wp == WM_LBUTTONDOWN || wp == WM_LBUTTONUP || wp == WM_MOUSEMOVE)){
+                MSLLHOOKSTRUCT st_hook = *((MSLLHOOKSTRUCT*)lp);
+                dragEnd = st_hook.pt;
+
+                if (clickDrag == WAITING){
+                    coords = dragEnd;
+                }
+                else{
+                    coords.x = dragEnd.x - dragStart.x;
+                    coords.y = dragEnd.y - dragStart.y;
+                }
+
+                printf("State: %i \t MPos: [%i, %i] \t Coord: [%i, %i]\n", clickDrag, dragEnd.x, dragEnd.y, coords.x, coords.y);
+
+                //printf("HANDMOUS- wp: 0x%X \t md: 0x%X \t fl: 0x%X\n", wp, st_hook.mouseData, st_hook.flags);
+
+                if (wp == WM_LBUTTONDOWN){
+                    dragStart = dragEnd;
+                    clickDrag = DRAGGING;
+                    printf("DOWN!\n");
+                }
+                if (wp == WM_LBUTTONUP){
+                    //takeScreenShotAndClipTo(dragStart, dragEnd);
+                    clickDrag = NOTNOW;
+                    printf("UP!\n");
+                    SetCursor(dfltCursor);
+                }
+            }
+        }
+        else{
+            return CallNextHookEx(mouhook, code, wp, lp);
+        }
+    }
 
     LRESULT CALLBACK handlekeys(int code, WPARAM wp, LPARAM lp){
-        if(code == HC_ACTION && (wp == WM_SYSKEYUP || wp == WM_KEYUP)){
+        if (code == HC_ACTION && (wp == WM_SYSKEYUP || wp == WM_KEYUP)){
             char tmp[0xFF] = {0};
             std::string str;
             DWORD msg = 1;
@@ -87,6 +132,8 @@ namespace FrogLies{
             else
                 keyspressed[str] = 0;
             //fprintf(out, "%s\n", str.c_str());
+
+            printf("%s up\n", str.c_str());
         }
         else if (code == HC_ACTION && (wp == WM_SYSKEYDOWN || wp == WM_KEYDOWN)) {
             char tmp[0xFF] = {0};
@@ -101,6 +148,8 @@ namespace FrogLies{
                 keyspressed[str] = 2;
             else
                 keyspressed[str] = 1;
+
+            printf("%s down\n", str.c_str());
         }
         CheckKeys();
 
@@ -110,36 +159,38 @@ namespace FrogLies{
     LRESULT CALLBACK windowprocedure(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam){
         //printf("FISH!");
 
+        printf("WINDPROC- wp: 0x%X \t lp: 0x%X\n", wparam, lparam);
+
         switch (msg){
             case WM_CREATE:
                 //printf("FISH!");
                 break;
-        case ICON_MESSAGE:
-             switch(lparam){
-                 case WM_LBUTTONDBLCLK:
-                         MessageBox(NULL, "Tray icon double clicked!", "clicked", MB_OK);
-                         break;
-                 case WM_LBUTTONUP:
-                         MessageBox(NULL, "Tray icon clicked!", "clicked", MB_OK);
-                         break;
-                 default:
-                        return DefWindowProc(hwnd, msg, wparam, lparam);
-             };
-             break;
-        case WM_CLOSE: case WM_DESTROY:
-            running = false;
-            break;
-        default:
-            return DefWindowProc(hwnd, msg, wparam, lparam);
+            case ICON_MESSAGE:
+                 switch(lparam){
+                     case WM_LBUTTONDBLCLK:
+                             MessageBox(NULL, "Tray icon double clicked!", "clicked", MB_OK);
+                             break;
+                     case WM_LBUTTONUP:
+                             MessageBox(NULL, "Tray icon clicked!", "clicked", MB_OK);
+                             break;
+                     default:
+                            return DefWindowProc(hwnd, msg, wparam, lparam);
+                 };
+                 break;
+            case WM_CLOSE: case WM_DESTROY:
+                running = false;
+                break;
+            default:
+                return DefWindowProc(hwnd, msg, wparam, lparam);
         };
         return 0;
     }
-    /*
+
     std::string Timestamp() {
         std:time_t t = std::time(nullptr);
-        std::string ToReturn = "ss_at_" + std::put_time(std::localtime(&t), "%c %Z");
+        std::string ToReturn = "ss_at_";// + std::put_time(std::localtime(&t), "%c %Z");
         return ToReturn;
-    }*/
+    }
 
     void CheckKeys(){
             if( ShortcutDesk.IsHit() ){
@@ -159,20 +210,20 @@ namespace FrogLies{
             }
 
             if (ShortcutCrop.IsHit()) {
-                    printf("hi\n");
+                printf("hi\n");
+                clickDrag = WAITING;
+                SetCursor(dragCursor);
             }
             if (ShortcutClip.IsHit()) {
-                /*
                 WHFF whff("");
                 HANDLE clip;
                 clip = GetClipboardData(CF_TEXT);
                 std::string text = (char*)clip;
                 void* data;
-                data = reinterpret_cast<void*>(text.front().c_str());
+                data = reinterpret_cast<void*>(text.front());//.c_str());
                 whff.Upload( Timestamp(), data, text.length(), GetMimeFromExt("txt"));
                 SetClipboard( whff.GetLastUpload() );
-                */
-                    printf("hi\n");
+
             }
             if (ShortcutQuit.IsHit()) {
                 PostMessage( hwnd, WM_CLOSE, 0, 0 );
@@ -224,6 +275,7 @@ using namespace FrogLies;
 
 int WINAPI WinMain(HINSTANCE thisinstance, HINSTANCE previnstance, LPSTR cmdline, int ncmdshow){
 
+
     ReadConf( "conf.cfg" );
 
 	HWND		fgwindow = GetForegroundWindow(); /* Current foreground window */
@@ -256,8 +308,18 @@ int WINAPI WinMain(HINSTANCE thisinstance, HINSTANCE previnstance, LPSTR cmdline
 	UpdateWindow(hwnd);
 	SetForegroundWindow(fgwindow); /* Give focus to the previous fg window */
 
+    dragCursor = LoadCursor(thisinstance, IDC_CROSS);
+    dfltCursor = GetCursor();
+
+    #define BEGIN_IN_DRAGMODE
+    #ifdef BEGIN_IN_DRAGMODE
+    SetCursor(dragCursor);
+    clickDrag = WAITING;
+    #endif
+
     IconA = (HICON) LoadImage( thisinstance, "img/icona.ico", IMAGE_ICON, 32, 32, LR_LOADFROMFILE );
     IconB = (HICON) LoadImage( thisinstance, "img/iconb.ico", IMAGE_ICON, 32, 32, LR_LOADFROMFILE );
+
 
     nid.cbSize = sizeof(NOTIFYICONDATA);
     nid.uID = 100;
@@ -272,6 +334,7 @@ int WINAPI WinMain(HINSTANCE thisinstance, HINSTANCE previnstance, LPSTR cmdline
 
     modulehandle = GetModuleHandle(NULL);
 	kbdhook = SetWindowsHookEx(WH_KEYBOARD_LL, (HOOKPROC)handlekeys, modulehandle, 0);
+	mouhook = SetWindowsHookEx(WH_MOUSE_LL, (HOOKPROC)handlemouse, modulehandle, 0);
 
     running = true;
 
@@ -284,5 +347,8 @@ int WINAPI WinMain(HINSTANCE thisinstance, HINSTANCE previnstance, LPSTR cmdline
 		TranslateMessage(&msg);
 		DispatchMessage(&msg);
 	}
+
+    Shell_NotifyIcon(NIM_DELETE, &nid);
+
 	return 0;
 }
