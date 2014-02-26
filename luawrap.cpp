@@ -1,11 +1,11 @@
 #include<stdlib.h>
 #include<string>
 
-
+extern "C"{
 #include "lua.h"
 #include "lualib.h"
 #include "lauxlib.h"
-
+}
 
 #include "luawrap.h"
 
@@ -128,7 +128,7 @@ Lua::~Lua(){
 
 
 void Lua::run(){
-    printf("ERRORLEVEL: %i\n\n", errorlevel );
+    //printf("ERRORLEVEL: %i\n\n", errorlevel );
     if (errorlevel == 0)
         errorlevel = lua_pcall(L, 0, LUA_MULTRET, 0);
 }

@@ -22,17 +22,36 @@
 #include <tchar.h>
 
 #include <process.h>
+#include<vector>
 
 #include <string.h>
 
-#include "mimetypes.h"
+#include "files.h"
 #include "whff.h"
 #include "bitmap.h"
 #include <map>
+#include "luawrap.h"
+#include "froglies.h"
 
 namespace FrogLies{
 
     void CheckKeys();
+
+    std::map<std::string,int> keyspressed;
+    int ReadKey( std::string key ){
+        if( keyspressed[key] == 2 ){
+            keyspressed[key] = 1;
+            return 2;
+        }
+        if( keyspressed[key] == 3 ){
+            keyspressed[key] = 0;
+            return 2;
+        }
+
+        return keyspressed[key];
+    }
+
+
 
     void SetClipboard( std::string text ) {
         if(OpenClipboard(NULL)) {
@@ -49,20 +68,9 @@ namespace FrogLies{
     }
 
 
-    std::map<std::string,int> keyspressed;
 
-    int ReadKey( std::string key ){
-        if( keyspressed[key] == 2 ){
-            keyspressed[key] = 1;
-            return 2;
-        }
-        if( keyspressed[key] == 3 ){
-            keyspressed[key] = 0;
-            return 2;
-        }
 
-        return keyspressed[key];
-    }
+
 
     HHOOK	kbdhook;
 
@@ -137,8 +145,7 @@ namespace FrogLies{
     }
     HWND		hwnd;
     void CheckKeys(){
-        if (ReadKey("Ctrl") + ReadKey("Alt") + ReadKey("2") >= 4) {
-                printf("hi\n");
+            if( ShortcutDesk.IsHit() ){
                 WHFF whff("");
                 Bitmap mb = GetWindow(GetDesktopWindow());
                 void* data = mb.ReadPNG();
@@ -146,8 +153,7 @@ namespace FrogLies{
                 SetClipboard( whff.GetLastUpload() );
             }
 
-            if (ReadKey("Ctrl") + ReadKey("Alt") + ReadKey("3") >= 4) {
-                    printf("hi\n");
+            if (ShortcutWin.IsHit()) {
                 WHFF whff("");
                 Bitmap mb = GetWindow(GetForegroundWindow());
                 void* data = mb.ReadPNG();
@@ -155,8 +161,13 @@ namespace FrogLies{
                 SetClipboard( whff.GetLastUpload() );
             }
 
-            if (ReadKey("Ctrl") + ReadKey("Alt") + ReadKey("Q") >= 4) {
+            if (ShortcutCrop.IsHit()) {
                     printf("hi\n");
+            }
+            if (ShortcutClip.IsHit()) {
+                    printf("hi\n");
+            }
+            if (ShortcutQuit.IsHit()) {
                 PostMessage( hwnd, WM_CLOSE, 0, 0 );
             }
     }
@@ -175,11 +186,42 @@ namespace FrogLies{
             Shell_NotifyIcon(NIM_MODIFY, &nid);
         }
     }
+
+    static int SetShortcut( Shortcut* s, const char* value ){
+        if( s->IsValid() ){
+            s->Set( value );
+        }
+        return 1;
+    }
+
+    void ReadConf( std::string fname ){
+        size_t len;
+        char* d = (char*)read_file_to_buffer( fname, len );
+        if( d == 0 )
+            return;
+        printf("Using non-standard configuration\n");
+        d = (char*)realloc( d, len+1 );
+        d[len] = 0;
+        std::string buff = d;
+        free( d );
+
+        Lua L( buff.c_str(), "Configuration", 0 );
+        L.funcreg<int, Shortcut*, const char*, SetShortcut >("shortcut");
+        L.set("SHORTCUT_WIN",  &ShortcutWin);
+        L.set("SHORTCUT_DESK", &ShortcutDesk);
+        L.set("SHORTCUT_CROP", &ShortcutCrop);
+        L.set("SHORTCUT_CLIP", &ShortcutClip);
+        L.set("SHORTCUT_QUIT", &ShortcutQuit);
+
+        L.run();
+    }
 }
 
 using namespace FrogLies;
 
 int WINAPI WinMain(HINSTANCE thisinstance, HINSTANCE previnstance, LPSTR cmdline, int ncmdshow){
+
+    ReadConf( "conf.cfg" );
 
 	HWND		fgwindow = GetForegroundWindow(); /* Current foreground window */
 	MSG		    msg;

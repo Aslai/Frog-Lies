@@ -27,7 +27,7 @@
 
 #include <string.h>
 
-#include "mimetypes.h"
+#include "files.h"
 #include "whff.h"
 #include "bitmap.h"
 

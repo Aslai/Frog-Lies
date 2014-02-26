@@ -1,7 +1,9 @@
 #ifndef __LUAWRAP_H__
 #define __LUAWRAP_H__
 
+extern "C"{
 #include "lua.h"
+}
 
 #include<string>
 #include<stdio.h>

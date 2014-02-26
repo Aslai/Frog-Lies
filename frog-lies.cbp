@@ -39,6 +39,7 @@
 			</Target>
 		</Build>
 		<Compiler>
+			<Add option="-std=c++11" />
 			<Add option="-Wall" />
 			<Add option="-DCURL_STATICLIB" />
 		</Compiler>
@@ -52,12 +53,18 @@
 			<Add library="gdi32" />
 			<Add library="png" />
 			<Add library="z" />
+			<Add library="lua52" />
 		</Linker>
 		<Unit filename="bitmap.cpp" />
 		<Unit filename="bitmap.h" />
+		<Unit filename="files.cpp" />
+		<Unit filename="files.h" />
+		<Unit filename="froglies.h" />
+		<Unit filename="luawrap.cpp" />
+		<Unit filename="luawrap.h" />
 		<Unit filename="main.cpp" />
-		<Unit filename="mimetypes.cpp" />
-		<Unit filename="mimetypes.h" />
+		<Unit filename="shortcut.cpp" />
+		<Unit filename="shortcut.h" />
 		<Unit filename="whff.cpp" />
 		<Unit filename="whff.h" />
 		<Extensions>

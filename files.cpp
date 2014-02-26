@@ -1,4 +1,7 @@
 #include <string>
+#include <cstdio>
+#include <cstdlib>
+
 namespace FrogLies{
     const char* mimes[] = {
         "3dm",          "x-world/x-3dmf",
@@ -651,5 +654,45 @@ namespace FrogLies{
                 return mimes[i+1];
         }
         return "application/octet-stream";
+    }
+
+    void* read_file_to_buffer( std::string fname, size_t& length ) {
+        FILE* f = fopen( fname.c_str(), "rb" );
+        if( f == 0 ) return 0;
+        length = 1000;
+        unsigned char* ret = (unsigned char*) malloc( length );
+        size_t i = 0;
+
+        while( true ) {
+            size_t hasread = fread( ret + i, 1, length - i, f);
+            i += hasread;
+            if( feof( f ) ) {
+                length = i;
+                break;
+            }
+            length *= 2;
+            ret = (unsigned char*) realloc( ret, length );
+        }
+        return ret;
+    }
+
+    std::string basename( std::string in ) {
+        int pos = 0;
+        for( int i = 0; in[i]!= 0; ++i ) {
+            if( in[i] == '/' || in[i] == '\\' )
+                pos = i+1;
+        }
+        std::string ret = in.c_str()+pos;
+        return ret;
+    }
+
+    std::string extension( std::string in ) {
+        int pos = 0;
+        for( int i = 0; in[i]!= 0; ++i ) {
+            if( in[i] == '.' )
+                pos = i+1;
+        }
+        std::string ret = in.c_str()+pos;
+        return ret;
     }
 }
