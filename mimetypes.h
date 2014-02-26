@@ -1,3 +1,8 @@
-extern char** mimes;
+#ifndef __FROGLIES_MIME_H__
+#define __FROGLIES_MIME_H__
 
-std::string GetMimeFromExt( std::string ext );
+namespace FrogLies{
+    std::string GetMimeFromExt( std::string ext );
+}
+
+#endif

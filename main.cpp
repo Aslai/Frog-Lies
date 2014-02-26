@@ -28,150 +28,156 @@
 #include "mimetypes.h"
 #include "whff.h"
 #include "bitmap.h"
-
-void CheckKeys();
-
-void SetClipboard( std::string text ) {
-    if(OpenClipboard(NULL)) {
-        HGLOBAL clipbuffer;
-        char *buffer;
-        EmptyClipboard();
-        clipbuffer = GlobalAlloc(GMEM_DDESHARE, text.length()+1);
-        buffer = (char*)GlobalLock(clipbuffer);
-        strcpy(buffer, text.c_str());
-        GlobalUnlock(clipbuffer);
-        SetClipboardData(CF_TEXT,clipbuffer);
-        CloseClipboard();
-    }
-}
-
 #include <map>
-std::map<std::string,int> keyspressed;
 
-int ReadKey( std::string key ){
-    if( keyspressed[key] == 2 ){
-        keyspressed[key] = 1;
-        return 2;
+namespace FrogLies{
+
+    void CheckKeys();
+
+    void SetClipboard( std::string text ) {
+        if(OpenClipboard(NULL)) {
+            HGLOBAL clipbuffer;
+            char *buffer;
+            EmptyClipboard();
+            clipbuffer = GlobalAlloc(GMEM_DDESHARE, text.length()+1);
+            buffer = (char*)GlobalLock(clipbuffer);
+            strcpy(buffer, text.c_str());
+            GlobalUnlock(clipbuffer);
+            SetClipboardData(CF_TEXT,clipbuffer);
+            CloseClipboard();
+        }
     }
-    if( keyspressed[key] == 3 ){
-        keyspressed[key] = 0;
-        return 2;
+
+
+    std::map<std::string,int> keyspressed;
+
+    int ReadKey( std::string key ){
+        if( keyspressed[key] == 2 ){
+            keyspressed[key] = 1;
+            return 2;
+        }
+        if( keyspressed[key] == 3 ){
+            keyspressed[key] = 0;
+            return 2;
+        }
+
+        return keyspressed[key];
     }
 
-    return keyspressed[key];
-}
+    HHOOK	kbdhook;
 
-HHOOK	kbdhook;
+     LRESULT CALLBACK handlekeys(int code, WPARAM wp, LPARAM lp){
+        if(code == HC_ACTION && (wp == WM_SYSKEYUP || wp == WM_KEYUP)){
+            char tmp[0xFF] = {0};
+            std::string str;
+            DWORD msg = 1;
+            KBDLLHOOKSTRUCT st_hook = *((KBDLLHOOKSTRUCT*)lp);
+            msg += (st_hook.scanCode << 16);
+            msg += (st_hook.flags << 24);
+            GetKeyNameText(msg, tmp, 0xFF);
+            str = std::string(tmp);
+            if( keyspressed[str] == 2 )
+                keyspressed[str] = 3;
+            else
+                keyspressed[str] = 0;
+            //fprintf(out, "%s\n", str.c_str());
+        }
+        else if (code == HC_ACTION && (wp == WM_SYSKEYDOWN || wp == WM_KEYDOWN)) {
+            char tmp[0xFF] = {0};
+            std::string str;
+            DWORD msg = 1;
+            KBDLLHOOKSTRUCT st_hook = *((KBDLLHOOKSTRUCT*)lp);
+            msg += (st_hook.scanCode << 16);
+            msg += (st_hook.flags << 24);
+            GetKeyNameText(msg, tmp, 0xFF);
+            str = std::string(tmp);
+            if( keyspressed[str] == 0 )
+                keyspressed[str] = 2;
+            else
+                keyspressed[str] = 1;
+        }
+        CheckKeys();
 
- LRESULT CALLBACK handlekeys(int code, WPARAM wp, LPARAM lp){
-    if(code == HC_ACTION && (wp == WM_SYSKEYUP || wp == WM_KEYUP)){
-        char tmp[0xFF] = {0};
-		std::string str;
-		DWORD msg = 1;
-		KBDLLHOOKSTRUCT st_hook = *((KBDLLHOOKSTRUCT*)lp);
-		msg += (st_hook.scanCode << 16);
-		msg += (st_hook.flags << 24);
-		GetKeyNameText(msg, tmp, 0xFF);
-		str = std::string(tmp);
-		if( keyspressed[str] == 2 )
-			keyspressed[str] = 3;
-		else
-			keyspressed[str] = 0;
-        //fprintf(out, "%s\n", str.c_str());
+        return CallNextHookEx(kbdhook, code, wp, lp);
     }
-	else if (code == HC_ACTION && (wp == WM_SYSKEYDOWN || wp == WM_KEYDOWN)) {
-		char tmp[0xFF] = {0};
-		std::string str;
-		DWORD msg = 1;
-		KBDLLHOOKSTRUCT st_hook = *((KBDLLHOOKSTRUCT*)lp);
-		msg += (st_hook.scanCode << 16);
-		msg += (st_hook.flags << 24);
-		GetKeyNameText(msg, tmp, 0xFF);
-		str = std::string(tmp);
-		if( keyspressed[str] == 0 )
-            keyspressed[str] = 2;
-        else
-            keyspressed[str] = 1;
-	}
-	CheckKeys();
-
-	return CallNextHookEx(kbdhook, code, wp, lp);
-}
 
 
-#define CLASSNAME	"winss"
-#define WINDOWTITLE	"svchost"
-#define ICON_MESSAGE (WM_USER + 1)
+    #define CLASSNAME	"winss"
+    #define WINDOWTITLE	"svchost"
+    #define ICON_MESSAGE (WM_USER + 1)
 
-bool running;
+    bool running;
 
-LRESULT CALLBACK windowprocedure(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam){
-    //printf("FISH!");
+    LRESULT CALLBACK windowprocedure(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam){
+        //printf("FISH!");
 
-    switch (msg){
-        case WM_CREATE:
-            //printf("FISH!");
+        switch (msg){
+            case WM_CREATE:
+                //printf("FISH!");
+                break;
+        case ICON_MESSAGE:
+             switch(lparam){
+                 case WM_LBUTTONDBLCLK:
+                         MessageBox(NULL, "Tray icon double clicked!", "clicked", MB_OK);
+                         break;
+                 case WM_LBUTTONUP:
+                         MessageBox(NULL, "Tray icon clicked!", "clicked", MB_OK);
+                         break;
+                 default:
+                        return DefWindowProc(hwnd, msg, wparam, lparam);
+             };
+             break;
+        case WM_CLOSE: case WM_DESTROY:
+            running = false;
             break;
-    case ICON_MESSAGE:
-         switch(lparam){
-             case WM_LBUTTONDBLCLK:
-                     MessageBox(NULL, "Tray icon double clicked!", "clicked", MB_OK);
-                     break;
-             case WM_LBUTTONUP:
-                     MessageBox(NULL, "Tray icon clicked!", "clicked", MB_OK);
-                     break;
-             default:
-                    return DefWindowProc(hwnd, msg, wparam, lparam);
-         };
-         break;
-    case WM_CLOSE: case WM_DESTROY:
-        running = false;
-        break;
-    default:
-        return DefWindowProc(hwnd, msg, wparam, lparam);
-    };
-    return 0;
-}
-HWND		hwnd;
-void CheckKeys(){
-	if (ReadKey("Ctrl") + ReadKey("Alt") + ReadKey("2") >= 4) {
-            printf("hi\n");
-            WHFF whff("");
-            Bitmap mb = GetWindow(GetDesktopWindow());
-            void* data = mb.ReadPNG();
-            whff.Upload( "Screencap.png", data, mb.PNGLen(), GetMimeFromExt("png"));
-            SetClipboard( whff.GetLastUpload() );
-        }
-
-        if (ReadKey("Ctrl") + ReadKey("Alt") + ReadKey("3") >= 4) {
+        default:
+            return DefWindowProc(hwnd, msg, wparam, lparam);
+        };
+        return 0;
+    }
+    HWND		hwnd;
+    void CheckKeys(){
+        if (ReadKey("Ctrl") + ReadKey("Alt") + ReadKey("2") >= 4) {
                 printf("hi\n");
-            WHFF whff("");
-            Bitmap mb = GetWindow(GetForegroundWindow());
-            void* data = mb.ReadPNG();
-            whff.Upload( "Screencap.png", data, mb.PNGLen(), GetMimeFromExt("png"));
-            SetClipboard( whff.GetLastUpload() );
-        }
+                WHFF whff("");
+                Bitmap mb = GetWindow(GetDesktopWindow());
+                void* data = mb.ReadPNG();
+                whff.Upload( "Screencap.png", data, mb.PNGLen(), GetMimeFromExt("png"));
+                SetClipboard( whff.GetLastUpload() );
+            }
 
-        if (ReadKey("Ctrl") + ReadKey("Alt") + ReadKey("Q") >= 4) {
-                printf("hi\n");
-            PostMessage( hwnd, WM_CLOSE, 0, 0 );
+            if (ReadKey("Ctrl") + ReadKey("Alt") + ReadKey("3") >= 4) {
+                    printf("hi\n");
+                WHFF whff("");
+                Bitmap mb = GetWindow(GetForegroundWindow());
+                void* data = mb.ReadPNG();
+                whff.Upload( "Screencap.png", data, mb.PNGLen(), GetMimeFromExt("png"));
+                SetClipboard( whff.GetLastUpload() );
+            }
+
+            if (ReadKey("Ctrl") + ReadKey("Alt") + ReadKey("Q") >= 4) {
+                    printf("hi\n");
+                PostMessage( hwnd, WM_CLOSE, 0, 0 );
+            }
+    }
+
+    NOTIFYICONDATA nid;
+    HICON IconA;
+    HICON IconB;
+
+    void GUIThread( void* ){
+        while( running ){
+            Sleep(1000);
+            nid.hIcon = IconA;
+            Shell_NotifyIcon(NIM_MODIFY, &nid);
+            Sleep(1000);
+            nid.hIcon = IconB;
+            Shell_NotifyIcon(NIM_MODIFY, &nid);
         }
+    }
 }
 
-NOTIFYICONDATA nid;
-HICON IconA;
-HICON IconB;
-
-void GUIThread( void* ){
-	while( running ){
-		Sleep(1000);
-		nid.hIcon = IconA;
-		Shell_NotifyIcon(NIM_MODIFY, &nid);
-		Sleep(1000);
-		nid.hIcon = IconB;
-		Shell_NotifyIcon(NIM_MODIFY, &nid);
-	}
-}
+using namespace FrogLies;
 
 int WINAPI WinMain(HINSTANCE thisinstance, HINSTANCE previnstance, LPSTR cmdline, int ncmdshow){
 
@@ -197,7 +203,7 @@ int WINAPI WinMain(HINSTANCE thisinstance, HINSTANCE previnstance, LPSTR cmdline
 
 	if (!(RegisterClassEx(&windowclass))){ return 1; }
 
-	hwnd = CreateWindowEx(NULL, CLASSNAME, WINDOWTITLE, WS_OVERLAPPEDWINDOW,
+	hwnd = CreateWindowEx(0, CLASSNAME, WINDOWTITLE, WS_OVERLAPPEDWINDOW,
                           CW_USEDEFAULT, CW_USEDEFAULT, 640, 480, HWND_DESKTOP, NULL,
                           thisinstance, NULL);
 
@@ -223,7 +229,7 @@ int WINAPI WinMain(HINSTANCE thisinstance, HINSTANCE previnstance, LPSTR cmdline
     Shell_NotifyIcon(NIM_ADD, &nid);
 
     modulehandle = GetModuleHandle(NULL);
-	kbdhook = SetWindowsHookEx(WH_KEYBOARD_LL, (HOOKPROC)handlekeys, modulehandle, NULL);
+	kbdhook = SetWindowsHookEx(WH_KEYBOARD_LL, (HOOKPROC)handlekeys, modulehandle, 0);
 
 
 
@@ -238,4 +244,5 @@ int WINAPI WinMain(HINSTANCE thisinstance, HINSTANCE previnstance, LPSTR cmdline
 		TranslateMessage(&msg);
 		DispatchMessage(&msg);
 	}
+	return 0;
 }
