@@ -7,6 +7,8 @@
 *.so
 *.dylib
 *.dll
+*.exe
+*.lnk
 
 # Compiled Static libraries
 *.lai

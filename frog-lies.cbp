@@ -2,12 +2,12 @@
 <CodeBlocks_project_file>
 	<FileVersion major="1" minor="6" />
 	<Project>
-		<Option title="whff" />
+		<Option title="Frog-Lies" />
 		<Option pch_mode="2" />
 		<Option compiler="gcc" />
 		<Build>
 			<Target title="Debug">
-				<Option output="bin/Debug/whff" prefix_auto="1" extension_auto="1" />
+				<Option output="bin/Debug/Frog-Lies" prefix_auto="1" extension_auto="1" />
 				<Option object_output="obj/Debug/" />
 				<Option type="1" />
 				<Option compiler="gcc" />
@@ -16,7 +16,7 @@
 				</Compiler>
 			</Target>
 			<Target title="Release">
-				<Option output="bin/Release/whff" prefix_auto="1" extension_auto="1" />
+				<Option output="bin/Release/Frog-Lies" prefix_auto="1" extension_auto="1" />
 				<Option object_output="obj/Release/" />
 				<Option type="1" />
 				<Option compiler="gcc" />
@@ -32,22 +32,25 @@
 		<Compiler>
 			<Add option="-Wall" />
 			<Add option="-DCURL_STATICLIB" />
-			<Add directory="C:/Users/Kaslai/docs/development/include" />
 		</Compiler>
 		<Linker>
-			<Add library="C:\Users\Kaslai\docs\development\bin\libcurl.dll" />
-			<Add library="C:\Users\Kaslai\docs\development\bin\libeay32.dll" />
-			<Add library="C:\Users\Kaslai\docs\development\bin\libidn-11.dll" />
-			<Add library="C:\Users\Kaslai\docs\development\bin\librtmp.dll" />
-			<Add library="C:\Users\Kaslai\docs\development\bin\libssh2.dll" />
-			<Add library="C:\Users\Kaslai\docs\development\bin\ssleay32.dll" />
-			<Add library="C:\Users\Kaslai\docs\development\bin\zlib1.dll" />
+			<Add library="curldll" />
+			<Add library="idn.dll" />
+			<Add library="rtmp" />
+			<Add library="ssh2dll" />
+			<Add library="ssl.dll" />
 			<Add library="winmm" />
 			<Add library="gdi32" />
-			<Add library="./libpng.a" />
-			<Add directory="C:/Users/Kaslai/docs/development/lib" />
+			<Add library="png" />
+			<Add library="z" />
 		</Linker>
+		<Unit filename="bitmap.cpp" />
+		<Unit filename="bitmap.h" />
 		<Unit filename="main.cpp" />
+		<Unit filename="mimetypes.cpp" />
+		<Unit filename="mimetypes.h" />
+		<Unit filename="whff.cpp" />
+		<Unit filename="whff.h" />
 		<Extensions>
 			<code_completion />
 			<envvars />
