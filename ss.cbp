@@ -48,9 +48,13 @@
 			<Add library="winmm" />
 			<Add directory="C:\library\lib" />
 		</Linker>
+		<Unit filename="bitmap.cpp" />
+		<Unit filename="bitmap.h" />
 		<Unit filename="main.cpp" />
 		<Unit filename="mimetypes.cpp" />
 		<Unit filename="mimetypes.h" />
+		<Unit filename="whff.cpp" />
+		<Unit filename="whff.h" />
 		<Extensions>
 			<code_completion />
 			<debugger />
