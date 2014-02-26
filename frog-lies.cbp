@@ -6,7 +6,7 @@
 		<Option pch_mode="2" />
 		<Option compiler="gcc" />
 		<Build>
-			<Target title="Debug">
+			<Target title="Debug-CLI">
 				<Option output="bin/Debug/Frog-Lies" prefix_auto="1" extension_auto="1" />
 				<Option object_output="obj/Debug/" />
 				<Option type="1" />
@@ -15,10 +15,19 @@
 					<Add option="-g" />
 				</Compiler>
 			</Target>
-			<Target title="Release">
+			<Target title="Debug-GUI">
+				<Option output="bin/Debug/Frog-Lies-g" prefix_auto="0" extension_auto="1" />
+				<Option object_output="obj/Debug/" />
+				<Option type="0" />
+				<Option compiler="gcc" />
+				<Compiler>
+					<Add option="-g" />
+				</Compiler>
+			</Target>
+			<Target title="Release-GUI">
 				<Option output="bin/Release/Frog-Lies" prefix_auto="1" extension_auto="1" />
 				<Option object_output="obj/Release/" />
-				<Option type="1" />
+				<Option type="0" />
 				<Option compiler="gcc" />
 				<Compiler>
 					<Add option="-O2" />
