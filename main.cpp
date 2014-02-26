@@ -16,9 +16,8 @@
 #include <shellapi.h>
 #include <Shlwapi.h>
 #include <process.h>
-#include<vector>
-
-
+#include <vector>
+//#include <ctime>
 
 #include "files.h"
 #include "whff.h"
@@ -135,13 +134,19 @@ namespace FrogLies{
         };
         return 0;
     }
+    /*
+    std::string Timestamp() {
+        std:time_t t = std::time(nullptr);
+        std::string ToReturn = "ss_at_" + std::put_time(std::localtime(&t), "%c %Z");
+        return ToReturn;
+    }*/
 
     void CheckKeys(){
             if( ShortcutDesk.IsHit() ){
                 WHFF whff("");
                 Bitmap mb = GetWindow(GetDesktopWindow());
                 void* data = mb.ReadPNG();
-                whff.Upload( "Screencap.png", data, mb.PNGLen(), GetMimeFromExt("png"));
+                whff.Upload( Timestamp(), data, mb.PNGLen(), GetMimeFromExt("png"));
                 SetClipboard( whff.GetLastUpload() );
             }
 
@@ -149,7 +154,7 @@ namespace FrogLies{
                 WHFF whff("");
                 Bitmap mb = GetWindow(GetForegroundWindow());
                 void* data = mb.ReadPNG();
-                whff.Upload( "Screencap.png", data, mb.PNGLen(), GetMimeFromExt("png"));
+                whff.Upload( Timestamp(), data, mb.PNGLen(), GetMimeFromExt("png"));
                 SetClipboard( whff.GetLastUpload() );
             }
 
@@ -157,6 +162,16 @@ namespace FrogLies{
                     printf("hi\n");
             }
             if (ShortcutClip.IsHit()) {
+                /*
+                WHFF whff("");
+                HANDLE clip;
+                clip = GetClipboardData(CF_TEXT);
+                std::string text = (char*)clip;
+                void* data;
+                data = reinterpret_cast<void*>(text.front().c_str());
+                whff.Upload( Timestamp(), data, text.length(), GetMimeFromExt("txt"));
+                SetClipboard( whff.GetLastUpload() );
+                */
                     printf("hi\n");
             }
             if (ShortcutQuit.IsHit()) {
