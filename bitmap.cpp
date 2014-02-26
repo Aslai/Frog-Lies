@@ -1,31 +1,24 @@
-#include <string>
-#include <windows.h>
-#include <curl/curl.h>
-#include <stdarg.h>
+#include <stdlib.h>
 #include <stdio.h>
-#include "png.h"
+#include <stdarg.h>
+#include <malloc.h>
+#include <memory.h>
+#include <string.h>
+#include <tchar.h>
+#include <string>
+#include <map>
 
-//#include "shitty_system_tray.h"
+#define WIN32_LEAN_AND_MEAN
 
-#define WIN32_LEAN_AND_MEAN		// Exclude rarely-used stuff from Windows headers
-
-// Windows Header Files:
 #include <windows.h>
 #include <Windowsx.h>
 #include <commctrl.h>
 #include <shellapi.h>
 #include <Shlwapi.h>
-
-// C RunTime Header Files
-#include <stdlib.h>
-#include <stdio.h>
-#include <malloc.h>
-#include <memory.h>
-#include <tchar.h>
-
 #include <process.h>
+#include "png.h"
+#include <curl/curl.h>
 
-#include <string.h>
 
 #include "mimetypes.h"
 #include "whff.h"

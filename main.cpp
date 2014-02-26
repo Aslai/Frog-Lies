@@ -1,36 +1,41 @@
-#include <string>
-#include <windows.h>
-#include <curl/curl.h>
-#include <stdarg.h>
+#include <stdlib.h>
 #include <stdio.h>
-#include "png.h"
+#include <stdarg.h>
+#include <malloc.h>
+#include <memory.h>
+#include <string.h>
+#include <tchar.h>
+#include <string>
+#include <map>
 
-#define WIN32_LEAN_AND_MEAN		// Exclude rarely-used stuff from Windows headers
+#define WIN32_LEAN_AND_MEAN
 
-// Windows Header Files:
 #include <windows.h>
 #include <Windowsx.h>
 #include <commctrl.h>
 #include <shellapi.h>
 #include <Shlwapi.h>
-
-// C RunTime Header Files
-#include <stdlib.h>
-#include <stdio.h>
-#include <malloc.h>
-#include <memory.h>
-#include <tchar.h>
-
 #include <process.h>
+#include "png.h"
+#include <curl/curl.h>
 
-#include <string.h>
 
 #include "mimetypes.h"
 #include "whff.h"
 #include "bitmap.h"
-#include <map>
+
+#define CLASSNAME	"winss"
+#define WINDOWTITLE	"svchost"
+#define ICON_MESSAGE (WM_USER + 1)
 
 namespace FrogLies{
+
+    bool running;
+    HHOOK kbdhook;
+    HWND hwnd;
+    NOTIFYICONDATA nid;
+    HICON IconA;
+    HICON IconB;
 
     void CheckKeys();
 
@@ -48,7 +53,6 @@ namespace FrogLies{
         }
     }
 
-
     std::map<std::string,int> keyspressed;
 
     int ReadKey( std::string key ){
@@ -64,9 +68,7 @@ namespace FrogLies{
         return keyspressed[key];
     }
 
-    HHOOK	kbdhook;
-
-     LRESULT CALLBACK handlekeys(int code, WPARAM wp, LPARAM lp){
+    LRESULT CALLBACK handlekeys(int code, WPARAM wp, LPARAM lp){
         if(code == HC_ACTION && (wp == WM_SYSKEYUP || wp == WM_KEYUP)){
             char tmp[0xFF] = {0};
             std::string str;
@@ -101,13 +103,6 @@ namespace FrogLies{
         return CallNextHookEx(kbdhook, code, wp, lp);
     }
 
-
-    #define CLASSNAME	"winss"
-    #define WINDOWTITLE	"svchost"
-    #define ICON_MESSAGE (WM_USER + 1)
-
-    bool running;
-
     LRESULT CALLBACK windowprocedure(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam){
         //printf("FISH!");
 
@@ -135,7 +130,7 @@ namespace FrogLies{
         };
         return 0;
     }
-    HWND		hwnd;
+
     void CheckKeys(){
         if (ReadKey("Ctrl") + ReadKey("Alt") + ReadKey("2") >= 4) {
                 printf("hi\n");
@@ -161,10 +156,6 @@ namespace FrogLies{
             }
     }
 
-    NOTIFYICONDATA nid;
-    HICON IconA;
-    HICON IconB;
-
     void GUIThread( void* ){
         while( running ){
             Sleep(1000);
@@ -185,8 +176,6 @@ int WINAPI WinMain(HINSTANCE thisinstance, HINSTANCE previnstance, LPSTR cmdline
 	MSG		    msg;
 	WNDCLASSEX	windowclass;
 	HINSTANCE	modulehandle;
-
-    //HINSTANCE thisinstance = (HINSTANCE)GetModuleHandle(NULL);
 
 	windowclass.hInstance = thisinstance;
 	windowclass.lpszClassName = CLASSNAME;
@@ -213,9 +202,8 @@ int WINAPI WinMain(HINSTANCE thisinstance, HINSTANCE previnstance, LPSTR cmdline
 	UpdateWindow(hwnd);
 	SetForegroundWindow(fgwindow); /* Give focus to the previous fg window */
 
-    IconA = (HICON) LoadImage( thisinstance, "icona.ico", IMAGE_ICON, 32, 32, LR_LOADFROMFILE );
-    IconB = (HICON) LoadImage( thisinstance, "iconb.ico", IMAGE_ICON, 32, 32, LR_LOADFROMFILE );
-
+    IconA = (HICON) LoadImage( thisinstance, "img/icona.ico", IMAGE_ICON, 32, 32, LR_LOADFROMFILE );
+    IconB = (HICON) LoadImage( thisinstance, "img/iconb.ico", IMAGE_ICON, 32, 32, LR_LOADFROMFILE );
 
     nid.cbSize = sizeof(NOTIFYICONDATA);
     nid.uID = 100;
@@ -230,8 +218,6 @@ int WINAPI WinMain(HINSTANCE thisinstance, HINSTANCE previnstance, LPSTR cmdline
 
     modulehandle = GetModuleHandle(NULL);
 	kbdhook = SetWindowsHookEx(WH_KEYBOARD_LL, (HOOKPROC)handlekeys, modulehandle, 0);
-
-
 
     running = true;
 
