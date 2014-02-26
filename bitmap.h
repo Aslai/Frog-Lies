@@ -1,6 +1,8 @@
 #ifndef __FROGLIES_BITMAP_H__
 #define __FROGLIES_BITMAP_H__
 
+#include "png.h"
+
 namespace FrogLies{
     class Bitmap {
         unsigned int Width, Height;
