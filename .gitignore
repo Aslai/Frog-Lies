@@ -6,8 +6,21 @@
 # Compiled Dynamic libraries
 *.so
 *.dylib
+*.dll
 
 # Compiled Static libraries
 *.lai
 *.la
 *.a
+
+# Images
+*.jpg
+*.bmp
+*.png
+
+# Other
+*.bin
+*.bak
+*.depend
+*.layout
+*.zip
