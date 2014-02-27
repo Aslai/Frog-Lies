@@ -67,8 +67,6 @@ static struct {
     int port, type;
 } protocols[] = {
     { "http", 80, TYPE_HTTP },
-    { "https", 443, TYPE_HTTPS },
-
     { "", -1, TYPE_INVALID }
 };
 enum {
