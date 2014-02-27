@@ -7,22 +7,18 @@
 #include <tchar.h>
 #include <string>
 #include <map>
-#define _WIN32_WINNT 0x0601
-#include <windows.h>
 
-<<<<<<< HEAD
 #pragma once
 #ifndef _WIN32_IE
 #define _WIN32_IE 0x0600
 #endif
 
+#define _WIN32_WINNT 0x0500
+
 #define WIN32_LEAN_AND_MEAN
 
 #include <windows.h>
 #include <mmsystem.h>
-=======
-
->>>>>>> 26d5c109b4367bdc67797563e5a5ec5aa7684ebe
 #include <Windowsx.h>
 #include <commctrl.h>
 #include <shellapi.h>
@@ -211,24 +207,13 @@ namespace FrogLies{
                     printf("DOWN!\n");
                 }
                 if (wp == WM_LBUTTONUP){
-<<<<<<< HEAD
-                    //takeScreenShotAndClipTo(dragStart, dragEnd);
-                    if (!(dragStart.x == dragEnd.x || dragStart.y == dragEnd.y)){
-                        Bitmap mb = GetWindow(GetDesktopWindow());
-                        mb.Crop( dragStart.x, dragStart.y, coords.x, coords.y );
-                        void* data = mb.ReadPNG();
-                        Upload("png", data, mb.PNGLen());
-
-=======
                     SetLayeredWindowAttributes(hwnd, RGB(255,255,255), 0, LWA_ALPHA);
                     WHFF whff("");
                     Bitmap mb = GetWindow(GetDesktopWindow());
                     mb.Crop( dragStart.x, dragStart.y, coords.x, coords.y );
                     void* data = mb.ReadPNG();
                     if( data != 0 ){
-                        whff.Upload( Timestamp()+".png", data, mb.PNGLen(), GetMimeFromExt("png"));
-                        SetClipboard( whff.GetLastUpload() );
->>>>>>> 26d5c109b4367bdc67797563e5a5ec5aa7684ebe
+                        Upload("png", data, mb.PNGLen());
                     }
 
                     clickDrag = NOTNOW;
@@ -354,24 +339,14 @@ namespace FrogLies{
             if( ShortcutDesk.IsHit() ){
                 Bitmap mb = GetWindow(GetDesktopWindow());
                 void* data = mb.ReadPNG();
-<<<<<<< HEAD
                 Upload( "png", data, mb.PNGLen());
-=======
-                whff.Upload( Timestamp() + ".png", data, mb.PNGLen(), GetMimeFromExt("png"));
-                SetClipboard( whff.GetLastUpload() );
->>>>>>> 26d5c109b4367bdc67797563e5a5ec5aa7684ebe
             }
 
             if (ShortcutWin.IsHit()) {
                 WHFF whff("");
                 Bitmap mb = GetWindow(GetForegroundWindow());
                 void* data = mb.ReadPNG();
-<<<<<<< HEAD
                 Upload( "png", data, mb.PNGLen());
-=======
-                whff.Upload( Timestamp() + ".png", data, mb.PNGLen(), GetMimeFromExt("png"));
-                SetClipboard( whff.GetLastUpload() );
->>>>>>> 26d5c109b4367bdc67797563e5a5ec5aa7684ebe
             }
 
             if (ShortcutCrop.IsHit()) {
@@ -447,10 +422,7 @@ namespace FrogLies{
 
         L.run();
 
-<<<<<<< HEAD
         bubble = L.get<int>("bubble");
-=======
->>>>>>> 26d5c109b4367bdc67797563e5a5ec5aa7684ebe
     }
 }
 
