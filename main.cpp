@@ -95,7 +95,7 @@ namespace FrogLies{
                     coords.y = dragEnd.y - dragStart.y;
                 }
 
-                printf("State: %i \t MPos: [%i, %i] \t Coord: [%i, %i]\n", clickDrag, dragEnd.x, dragEnd.y, coords.x, coords.y);
+                //printf("State: %i \t MPos: [%i, %i] \t Coord: [%i, %i]\n", clickDrag, dragEnd.x, dragEnd.y, coords.x, coords.y);
 
                 //printf("HANDMOUS- wp: 0x%X \t md: 0x%X \t fl: 0x%X\n", wp, st_hook.mouseData, st_hook.flags);
 
@@ -187,8 +187,19 @@ namespace FrogLies{
     }
 
     std::string Timestamp() {
-        std:time_t t = std::time(nullptr);
-        std::string ToReturn = "ss_at_";// + std::put_time(std::localtime(&t), "%c %Z");
+        time_t rawtime;
+        struct tm * timeinfo;
+        time ( &rawtime );
+        timeinfo = localtime ( &rawtime );
+        char str[64];
+        snprintf(str, 64, "ss at %s", asctime(timeinfo));
+        int i = 0;
+        while (str[i]){
+            i++;
+            if (str[i] == ' '){
+                str[i] = '_'; }
+        }
+        std::string ToReturn(str);
         return ToReturn;
     }
 
@@ -220,7 +231,7 @@ namespace FrogLies{
                 clip = GetClipboardData(CF_TEXT);
                 std::string text = (char*)clip;
                 void* data;
-                data = reinterpret_cast<void*>(text.front());//.c_str());
+                data = (void*) text.c_str();
                 whff.Upload( Timestamp(), data, text.length(), GetMimeFromExt("txt"));
                 SetClipboard( whff.GetLastUpload() );
 
@@ -311,7 +322,7 @@ int WINAPI WinMain(HINSTANCE thisinstance, HINSTANCE previnstance, LPSTR cmdline
     dragCursor = LoadCursor(thisinstance, IDC_CROSS);
     dfltCursor = GetCursor();
 
-    #define BEGIN_IN_DRAGMODE
+    //#define BEGIN_IN_DRAGMODE
     #ifdef BEGIN_IN_DRAGMODE
     SetCursor(dragCursor);
     clickDrag = WAITING;
