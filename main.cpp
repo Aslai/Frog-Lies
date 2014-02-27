@@ -28,6 +28,7 @@
 #include <ctime>
 #include <cstring>
 #include <deque>
+#include <cctype>
 
 #include "files.h"
 #include "whff.h"
@@ -42,12 +43,12 @@
 #define ICON_MESSAGE (WM_USER + 1)
 
 namespace FrogLies {
-    enum{
+    enum {
         NOTNOW = 0,
         WAITING,
         DRAGGING
     };
-    enum{
+    enum {
         MENU_NAME = 3000,
         MENU_RECENTS,
         MENU_SS_WIND,
@@ -361,44 +362,44 @@ namespace FrogLies {
         POINT curPoint;
         UINT clicked;
 
-        switch (msg){
+        switch ( msg ) {
             case WM_CREATE:
                 menu = CreatePopupMenu();
-                AppendMenu(menu, MF_STRING | MF_DISABLED, MENU_NAME, "Frog-Lies");
+                AppendMenu( menu, MF_STRING | MF_DISABLED, MENU_NAME, "Frog-Lies" );
 
-                AppendMenu(menu, MF_SEPARATOR, NULL, NULL);
+                AppendMenu( menu, MF_SEPARATOR, NULL, NULL );
 
-                AppendMenu(menu, MF_STRING | MF_GRAYED, MENU_RECENTS, "Recently uploaded...");
+                AppendMenu( menu, MF_STRING | MF_GRAYED, MENU_RECENTS, "Recently uploaded..." );
 
-                AppendMenu(menu, MF_SEPARATOR, NULL, NULL);
+                AppendMenu( menu, MF_SEPARATOR, NULL, NULL );
 
-                AppendMenu(menu, MF_STRING, MENU_SS_WIND, "Screenshot Current Window");
-                AppendMenu(menu, MF_STRING, MENU_SS_SCRN, "Screenshot Entire Screen");
-                AppendMenu(menu, MF_STRING, MENU_SS_CROP, "Screenshot an Area of the Screen");
-                AppendMenu(menu, MF_STRING, MENU_SS_CLIP, "Upload Clipboard");
+                AppendMenu( menu, MF_STRING, MENU_SS_WIND, "Screenshot Current Window" );
+                AppendMenu( menu, MF_STRING, MENU_SS_SCRN, "Screenshot Entire Screen" );
+                AppendMenu( menu, MF_STRING, MENU_SS_CROP, "Screenshot an Area of the Screen" );
+                AppendMenu( menu, MF_STRING, MENU_SS_CLIP, "Upload Clipboard" );
 
-                AppendMenu(menu, MF_SEPARATOR, NULL, NULL);
+                AppendMenu( menu, MF_SEPARATOR, NULL, NULL );
 
-                AppendMenu(menu, MF_STRING, MENU_DISABLE, "Disable Uploading"); // | MF_CHECKED
-                AppendMenu(menu, MF_STRING, MENU_SETTING, "Settings");
+                AppendMenu( menu, MF_STRING, MENU_DISABLE, "Disable Uploading" ); // | MF_CHECKED
+                AppendMenu( menu, MF_STRING, MENU_SETTING, "Settings" );
 
-                AppendMenu(menu, MF_SEPARATOR, NULL, NULL);
+                AppendMenu( menu, MF_SEPARATOR, NULL, NULL );
 
-                AppendMenu(menu, MF_STRING, MENU_EXIT, "Exit");
+                AppendMenu( menu, MF_STRING, MENU_EXIT, "Exit" );
                 break;
             case ICON_MESSAGE:
-                switch(lparam){
+                switch( lparam ) {
                     case WM_RBUTTONDOWN:
-                        GetCursorPos(&curPoint) ;
+                        GetCursorPos( &curPoint ) ;
 
                         //SetForegroundWindow(hwnd);
 
-                        clicked = TrackPopupMenuEx(menu, TPM_RETURNCMD | TPM_NONOTIFY, curPoint.x, curPoint.y, hwnd, NULL);
+                        clicked = TrackPopupMenuEx( menu, TPM_RETURNCMD | TPM_NONOTIFY, curPoint.x, curPoint.y, hwnd, NULL );
 
 
-                        SendMessage(hwnd, WM_NULL, 0, 0);
+                        SendMessage( hwnd, WM_NULL, 0, 0 );
 
-                        switch (clicked){
+                        switch ( clicked ) {
                             case MENU_EXIT:
                                 sayString( "Frog-lies is quitting", "Quitting" );
                                 doquit = 6000;
@@ -426,10 +427,10 @@ namespace FrogLies {
                         //SendMessage(hwnd, WM_NULL, 0, 0);
                         break;
                         /*
-                    case WM_LBUTTONDBLCLK:
+                        case WM_LBUTTONDBLCLK:
                         MessageBox( NULL, "Tray icon double clicked!", "clicked", MB_OK );
                         break;
-                    case WM_LBUTTONUP:
+                        case WM_LBUTTONUP:
                         MessageBox( NULL, "Tray icon clicked!", "clicked", MB_OK );
                         break;
                         */
@@ -511,7 +512,7 @@ namespace FrogLies {
             SetLayeredWindowAttributes( hwnd, RGB( 255, 255, 255 ), 0, LWA_ALPHA );
             ShowWindow( hwnd, SW_SHOW );
         }
-        if (ShortcutStop.IsHit()){
+        if ( ShortcutStop.IsHit() ) {
             clickDrag = NOTNOW;
             UnhookWindowsHookEx( mouhook );
             mouhook = NULL;
@@ -599,12 +600,99 @@ namespace FrogLies {
 
 using namespace FrogLies;
 
+std::vector<std::string> ParseCmdLine( const char* cmdline ) {
+    char* buffer = ( char* ) malloc( strlen( cmdline ) + 1 );
+    strcpy( buffer, cmdline );
+    std::vector<std::string> args;
+    int len = strlen( cmdline );
+    int pos = 0;
+    int isquote = 0;
+    int isescaped = 0;
+    int isreading = 0;
+    for( int i = 0; i <= len; ++i ) {
+        if( !isescaped ) {
+            if( buffer[i] == '\\' ) {
+                isescaped = 1;
+                if( !isreading ) {
+                    isreading = 1;
+                    pos = i;
+                }
+                continue;
+            } else if( buffer[i] == '\"' ) {
+                if( isquote ) {
+                    buffer[i] = 0;
+                    args.push_back( buffer + pos );
+                    buffer[i] = ' ';
+                    pos = i + 1;
+                    isquote = 0;
+                    isreading = 0;
+                    continue;
+                } else {
+                    if( isreading ) {
+                        buffer[i] = 0;
+                        args.push_back( buffer + pos );
+                        buffer[i] = ' ';
+                    }
+                    pos = i + 1;
+                    isquote = 1;
+                    isreading = 0;
+                    continue;
+                }
+            } else if( isspace( buffer[i] ) || buffer[i] == 0 ) {
+                if( !isquote && isreading ) {
+                    buffer[i] = 0;
+                    args.push_back( buffer + pos );
+                    buffer[i] = ' ';
+                    isreading = 0;
+                }
+            } else {
+                if( !isreading ) {
+                    isreading = 1;
+                    pos = i;
+                }
+            }
+        } else {
+            int replacement = ' ';
+            int newpos = 1;
+            switch( buffer[i] ) {
+                case 'r': replacement = '\r'; break;
+                case 'n': replacement = '\n'; break;
+                case 't': replacement = '\t'; break;
+                case '\\': replacement = '\\'; break;
+                case 'o': sscanf( buffer + i, "o%o%n", &replacement, &newpos ); break;
+                case 'x': sscanf( buffer + i, "x%x%n", &replacement, &newpos ); break;
+                case ' ': replacement = ' '; break;
+            }
 
+            for( int j = 0; newpos + i + j - 1 < len; ++j ) {
+                buffer[i + j] = buffer[newpos + i + j];
+            }
+            len -= newpos;
+            buffer[i - 1] = replacement;
+            isescaped = 0;
+            i -= 1;
+            continue;
+        }
+    }
+    if( isreading ) {
+        args.push_back( buffer + pos );
+    }
+    free( buffer );
+    return args;
+}
+
+void HandleArgs( const char* cmdline ) {
+    std::vector< std::string > args = ParseCmdLine( cmdline );
+
+    for( int i = 0; i < args.size(); ++i ) {
+        printf( "%s\n", args[i].c_str() );
+    }
+}
 
 
 int WINAPI WinMain( HINSTANCE thisinstance, HINSTANCE previnstance, LPSTR cmdline, int ncmdshow ) {
-
-
+    //printf("%s\n", cmdline );
+    HandleArgs( "This is a \"TESTING SPACES\" lel\\ heh and nu\\nmber! \\x41\\x48" );
     ReadConf( "conf.cfg" );
 
 
@@ -651,14 +739,14 @@ int WINAPI WinMain( HINSTANCE thisinstance, HINSTANCE previnstance, LPSTR cmdlin
     modulehandle = GetModuleHandle( NULL );
 
     /*#define BEGIN_IN_DRAGMODE
-#ifdef BEGIN_IN_DRAGMODE
+    #ifdef BEGIN_IN_DRAGMODE
     mouhook = SetWindowsHookEx( WH_MOUSE_LL, ( HOOKPROC )handlemouse, modulehandle, 0 );
     MyCursor = dragCursor;
     SetCursor( dragCursor );
     clickDrag = WAITING;
     SetLayeredWindowAttributes( hwnd, RGB( 255, 255, 255 ), 0, LWA_ALPHA );
     ShowWindow( hwnd, SW_SHOW );
-#endif*/
+    #endif*/
 
     IconA = LoadIcon( thisinstance, MAKEINTRESOURCE( 1 ) );
     IconB = LoadIcon( thisinstance, MAKEINTRESOURCE( 2 ) );
