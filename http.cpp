@@ -243,7 +243,7 @@ int HTTP::Get(){
 
 int HTTP::processHeaders( char* buffer, size_t len ){
     char* prev = buffer;
-    int i;
+    unsigned int i;
     for( i = 0; i < len; ++i ){
         if( buffer[i] == '\r' && i < len + 1 && buffer[i+1] == '\n' ){
             buffer[i] = 0;
@@ -308,7 +308,7 @@ int HTTP::Post( void* data, size_t datalen ){
         putchar( buffer[i] );
     }
     HTTP::dataoffset = processHeaders( buffer, bufpos );
-    printf( "\n\nLEL %d\n\n", dataoffset );
+
     if( HTTP::data != 0 )
         free( HTTP::data );
     if( HTTP::dataoffset >= 0 ){
@@ -320,6 +320,12 @@ int HTTP::Post( void* data, size_t datalen ){
         HTTP::dataoffset = HTTP::length = 0;
         free( buffer );
     }
+    int ret = 0;
+    float garbage;
+    if( sscanf( GetHeader(0).c_str(), "HTTP/%f %d", &garbage, &ret) < 2 ){
+        return -1;
+    }
+    return ret;
 }
 
 void HTTP::SetHeader( std::string value ){
@@ -327,10 +333,9 @@ void HTTP::SetHeader( std::string value ){
 }
 
 const char* HTTP::GetData(size_t& Length){
-    printf("\n\nPOINTER %d\n\n", data + dataoffset);
-    if( data != 0 ){
+    if( data ){
         Length = length;
-        return (const char*) data + dataoffset;
+        return ((const char*) data) + dataoffset;
     }
     Length = 0;
     return 0;
@@ -354,7 +359,7 @@ static std::string TrimLeadingWhitespace( std::string in ){
 
 std::string HTTP::GetHeader( std::string key ){
     key = ToLower( key );
-    for( int i = 0; i < Headers.size(); ++i ){
+    for( unsigned int i = 0; i < Headers.size(); ++i ){
         if( ToLower( Headers[i] ).substr(0, key.length()) == key ){
             return TrimLeadingWhitespace( Headers[i].substr( key.length() + 1 ) );
         }

@@ -87,6 +87,7 @@ namespace FrogLies{
             #endif
         }
         SetOwner( owner );
+        laststatus = 0;
     }
 
     void WHFF::SetOwner( std::string owner ) {
@@ -185,6 +186,10 @@ namespace FrogLies{
         buffer = read_file_to_buffer( fname, len );
         Upload( basename( fname ), buffer, len, GetMimeFromExt( extension( fname ) ), password );
         return 1;
+    }
+
+    int WHFF::GetStatus(){
+        return laststatus;
     }
 }
 

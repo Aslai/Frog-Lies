@@ -71,7 +71,7 @@ namespace FrogLies{
     std::map<std::string,int> keyspressed;
     std::string Timestamp();
     void Upload( std::string type, const void* data, size_t datalen );
-    void sayString(const char* str, char* title);
+    void sayString(std::string message, std::string title);
     int ReadKey( std::string key ){
         if( keyspressed[key] == 2 ){
             keyspressed[key] = 1;
@@ -97,52 +97,6 @@ namespace FrogLies{
             SetClipboardData(CF_TEXT,clipbuffer);
             CloseClipboard();
         }
-    }
-
-    void drawtext( int x, int y, char* str ){
-        HDC screenDC = ::GetDC(0);
-        COLORREF cBack, cTxt;
-        cBack = RGB(255, 255, 255);
-        cTxt = RGB(10, 10, 10);
-
-        SetBkColor(screenDC, cBack);
-        SetTextColor(screenDC, cTxt);
-        //SetBkMode(screenDC, TRANSPARENT);
-
-        TextOut( screenDC, x, y, str, strlen( str ) );
-        //::Rectangle(screenDC, 200, 200, 300, 300);
-        ::ReleaseDC(0, screenDC);
-    }
-
-    void drawrect( int x, int y, int w, int h ){
-        HDC screenDC = ::GetDC(0);
-        COLORREF cBack, cTxt;
-        cBack = RGB(0, 0, 0);
-        cTxt = RGB(150,150, 100);
-
-        SetBkColor(screenDC, cTxt);
-        Rectangle( screenDC, x, y, w, h );
-
-        //::Rectangle(screenDC, 200, 200, 300, 300);
-        ReleaseDC(0, screenDC);
-    }
-
-    void drawlinedrect( int x1, int y1, int x2, int y2 ){
-        HDC screenDC = GetDC(0);
-        COLORREF cBack, cTxt;
-        cBack = RGB(0, 0, 0);
-        cTxt = RGB(150,150, 100);
-
-        SetBkColor(screenDC, cTxt);
-
-        MoveToEx(screenDC, x1, y1, NULL);
-        LineTo(screenDC, x1, y2);
-        LineTo(screenDC, x2, y2);
-        LineTo(screenDC, x2, y1);
-        LineTo(screenDC, x1, y1);
-
-        //::Rectangle(screenDC, 200, 200, 300, 300);
-        ReleaseDC(0, screenDC);
     }
 
     std::string Timestamp() {
@@ -280,7 +234,7 @@ namespace FrogLies{
     LRESULT CALLBACK windowprocedure(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam){
         //printf("FISH!");
 
-        printf("WINDPROC- wp: 0x%X \t lp: 0x%X\n", wparam, lparam);
+        //printf("WINDPROC- wp: 0x%X \t lp: 0x%X\n", wparam, lparam);
 
         switch (msg){
             case WM_CREATE:
@@ -310,7 +264,7 @@ namespace FrogLies{
         return 0;
     }
 
-    void sayString(const char* str, char* title){
+    void sayString(std::string str, std::string title){
         if (bubble){
             nid.cbSize = NOTIFYICONDATA_V2_SIZE;
 
@@ -319,8 +273,8 @@ namespace FrogLies{
             //Shell_NotifyIcon(NIM_SETVERSION, &nid);
 
             nid.uFlags = NIF_INFO;
-            strcpy(nid.szInfo, str);
-            strcpy(nid.szInfoTitle, title);
+            strcpy(nid.szInfo, str.c_str());
+            strcpy(nid.szInfoTitle, title.c_str());
             nid.uTimeout = 10000;
             nid.dwInfoFlags = NIF_INFO;
             Shell_NotifyIcon(NIM_MODIFY, &nid);
@@ -331,7 +285,7 @@ namespace FrogLies{
         std::string str = Timestamp() + "." + type;
         whff.Upload( str, data, datalen, GetMimeFromExt(type));
         SetClipboard( whff.GetLastUpload() );
-        sayString((Timestamp() + type + " has been uploaded...").c_str(),"Screenshot Taken");
+        sayString(Timestamp() + type + " has been uploaded...","Screenshot Taken");
         PlaySound(MAKEINTRESOURCE(3), GetModuleHandle(NULL), SND_ASYNC | SND_RESOURCE);
     }
 
@@ -430,9 +384,12 @@ namespace FrogLies{
 
 using namespace FrogLies;
 
-
+#include "http.h"
 
 int WINAPI WinMain(HINSTANCE thisinstance, HINSTANCE previnstance, LPSTR cmdline, int ncmdshow){
+
+    HTTP a("kaslai.com/hsf");
+    printf("\n\n%d\n\n\n", a.Get() );
 
     ReadConf( "conf.cfg" );
 
