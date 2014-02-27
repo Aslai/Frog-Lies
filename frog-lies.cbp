@@ -44,16 +44,17 @@
 			<Add option="-DCURL_STATICLIB" />
 		</Compiler>
 		<Linker>
-			<Add library="winmm" />
-			<Add library="gdi32" />
 			<Add library="png" />
 			<Add library="lua52" />
 			<Add library="user32" />
 			<Add library="z" />
 			<Add library="ws2_32" />
+			<Add library="winmm" />
+			<Add library="gdi32" />
 		</Linker>
 		<Unit filename="bitmap.cpp" />
 		<Unit filename="bitmap.h" />
+		<Unit filename="debug.h" />
 		<Unit filename="files.cpp" />
 		<Unit filename="files.h" />
 		<Unit filename="froglies.h" />
@@ -62,6 +63,8 @@
 		<Unit filename="luawrap.cpp" />
 		<Unit filename="luawrap.h" />
 		<Unit filename="main.cpp" />
+		<Unit filename="mutex.cpp" />
+		<Unit filename="mutex.h" />
 		<Unit filename="resource.rc">
 			<Option compilerVar="WINDRES" />
 		</Unit>

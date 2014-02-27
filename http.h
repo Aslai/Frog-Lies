@@ -4,6 +4,10 @@
 #include <string>
 #include <vector>
 
+
+#include "debug.h"
+
+
 class HTTP {
     std::vector<std::string> Headers;
     int status;

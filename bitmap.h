@@ -2,6 +2,7 @@
 #define __FROGLIES_BITMAP_H__
 
 #include "png.h"
+#include "debug.h"
 
 namespace FrogLies {
     class Bitmap {

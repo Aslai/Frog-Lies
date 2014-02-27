@@ -27,6 +27,7 @@
 #include <vector>
 #include <ctime>
 #include <cstring>
+#include <deque>
 
 #include "files.h"
 #include "whff.h"
@@ -34,9 +35,11 @@
 #include <map>
 #include "luawrap.h"
 #include "froglies.h"
+#include "mutex.h"
+
 
 #define CLASSNAME   "winss"
-#define WINDOWTITLE "svchost"
+#define WINDOWTITLE "FrogLies"
 #define ICON_MESSAGE (WM_USER + 1)
 
 #define NOTNOW 0
@@ -44,6 +47,13 @@
 #define DRAGGING 2
 
 namespace FrogLies {
+    enum {
+        UPLOAD_NONE = -1,
+        UPLOAD_WINDOW,
+        UPLOAD_SCREEN,
+        UPLOAD_CROP,
+        UPLOAD_CLIP
+    };
 
     bool running;
     HHOOK kbdhook;
@@ -61,42 +71,127 @@ namespace FrogLies {
     HCURSOR dfltCursor;
     HCURSOR MyCursor;
 
+    int doquit = 0;
+
     bool bubble;
 
     WHFF whff( "" );
 
+    struct _anupload {
+        int t;
+        struct {int x, y, w, h;} d;
+    };
+    std::deque<_anupload> todouploads;
+
+    Mutex lock;
+
 
     void CheckKeys();
 
+    int uploadthreadrunning = 0;
+
+    void Upload( std::string type, const void* data, size_t datalen );
+    void __uploadthread( void* ) {
+        lock.Lock();
+        if( uploadthreadrunning ) {
+            return;
+        }
+        uploadthreadrunning = 1;
+        lock.Unlock();
+        while( 1 ) {
+            lock.Lock();
+            if( todouploads.size() <= 0 ) {
+                lock.Unlock();
+                break;
+            }
+            _anupload a = todouploads.front();
+            todouploads.pop_front();
+            lock.Unlock();
+            switch( a.t ) {
+                case UPLOAD_WINDOW: {
+                        Bitmap mb = GetWindow( GetForegroundWindow() );
+                        void* data = mb.ReadPNG();
+                        Upload( "png", data, mb.PNGLen() );
+                    } break;
+
+                case UPLOAD_SCREEN: {
+                        Bitmap mb = GetWindow( GetDesktopWindow() );
+                        void* data = mb.ReadPNG();
+                        Upload( "png", data, mb.PNGLen() );
+                    } break;
+
+                case UPLOAD_CROP: {
+                        Bitmap mb = GetWindow( GetDesktopWindow() );
+                        mb.Crop( dragStart.x, dragStart.y, coords.x, coords.y );
+                        void* data = mb.ReadPNG();
+                        if( data != 0 ) {
+                            Upload( "png", data, mb.PNGLen() );
+                        }
+                    } break;
+
+                case UPLOAD_CLIP: {
+                        if ( !OpenClipboard( NULL ) ) {
+                            continue;
+                        }
+                        HANDLE hClipboardData = GetClipboardData( CF_TEXT );
+                        char *pchData = ( char* )GlobalLock( hClipboardData );
+                        void* data = ( void* )pchData;
+                        Upload( "txt", data, strlen( pchData ) );
+                        GlobalUnlock( hClipboardData );
+                        CloseClipboard();
+                    } break;
+
+                default:
+                    break;
+
+            }
+        }
+        lock.Lock();
+        uploadthreadrunning = 0;
+        lock.Unlock();
+    }
+
+    void DoUpload( int type, int x = -1, int y = -1, int w = -1, int h = -1 ) {
+        _anupload a;
+        a.t = type;
+        a.d.x = x;
+        a.d.y = y;
+        a.d.w = w;
+        a.d.h = h;
+        lock.Lock();
+        todouploads.push_back( a );
+        _beginthread( __uploadthread, 1000, 0 );
+        lock.Unlock();
+    }
+
     std::map<std::string, int> keyspressed;
     std::string Timestamp();
-    void Upload( std::string type, const void* data, size_t datalen );
     void sayString( std::string message, std::string title );
     int ReadKey( std::string key ) {
         if( keyspressed[key] == 2 ) {
-                keyspressed[key] = 1;
-                return 2;
-            }
+            keyspressed[key] = 1;
+            return 2;
+        }
         if( keyspressed[key] == 3 ) {
-                keyspressed[key] = 0;
-                return 2;
-            }
+            keyspressed[key] = 0;
+            return 2;
+        }
 
         return keyspressed[key];
     }
 
     void SetClipboard( std::string text ) {
         if( OpenClipboard( NULL ) ) {
-                HGLOBAL clipbuffer;
-                char *buffer;
-                EmptyClipboard();
-                clipbuffer = GlobalAlloc( GMEM_DDESHARE, text.length() + 1 );
-                buffer = ( char* )GlobalLock( clipbuffer );
-                strcpy( buffer, text.c_str() );
-                GlobalUnlock( clipbuffer );
-                SetClipboardData( CF_TEXT, clipbuffer );
-                CloseClipboard();
-            }
+            HGLOBAL clipbuffer;
+            char *buffer;
+            EmptyClipboard();
+            clipbuffer = GlobalAlloc( GMEM_DDESHARE, text.length() + 1 );
+            buffer = ( char* )GlobalLock( clipbuffer );
+            strcpy( buffer, text.c_str() );
+            GlobalUnlock( clipbuffer );
+            SetClipboardData( CF_TEXT, clipbuffer );
+            CloseClipboard();
+        }
     }
 
     std::string Timestamp() {
@@ -108,11 +203,11 @@ namespace FrogLies {
         snprintf( str, 64, "ss at %s", asctime( timeinfo ) );
         int i = 0;
         while ( str[i] ) {
-                i++;
-                if ( str[i] == ' ' ) {
-                        str[i] = '_';
-                    }
+            i++;
+            if ( str[i] == ' ' ) {
+                str[i] = '_';
             }
+        }
         std::string ToReturn( str );
         return ToReturn;
     }
@@ -120,120 +215,115 @@ namespace FrogLies {
     LRESULT CALLBACK handlemouse( int code, WPARAM wp, LPARAM lp ) {
 
         if ( clickDrag ) {
-                if ( ( wp == WM_LBUTTONDOWN || wp == WM_LBUTTONUP || wp == WM_MOUSEMOVE ) ) {
-                        MSLLHOOKSTRUCT st_hook = *( ( MSLLHOOKSTRUCT* )lp );
+            if ( ( wp == WM_LBUTTONDOWN || wp == WM_LBUTTONUP || wp == WM_MOUSEMOVE ) ) {
+                MSLLHOOKSTRUCT st_hook = *( ( MSLLHOOKSTRUCT* )lp );
 
-                        dragEnd = st_hook.pt;
+                dragEnd = st_hook.pt;
 
-                        if ( clickDrag == WAITING ) {
-                                coords = dragEnd;
-                            }
-                        else {
-                                coords.x = dragEnd.x - dragStart.x;
-                                coords.y = dragEnd.y - dragStart.y;
-                            }
+                if ( clickDrag == WAITING ) {
+                    coords = dragEnd;
+                } else {
+                    coords.x = dragEnd.x - dragStart.x;
+                    coords.y = dragEnd.y - dragStart.y;
+                }
 
-                        int x, y, w, h;
-                        x = dragStart.x < dragEnd.x ? dragStart.x : dragEnd.x;
-                        y = dragStart.y < dragEnd.y ? dragStart.y : dragEnd.y;
-                        w = dragStart.x - dragEnd.x;
-                        h = dragStart.y - dragEnd.y;
-                        if( w < 0 ) { w = -w; }
-                        if( h < 0 ) { h = -h; }
+                int x, y, w, h;
+                x = dragStart.x < dragEnd.x ? dragStart.x : dragEnd.x;
+                y = dragStart.y < dragEnd.y ? dragStart.y : dragEnd.y;
+                w = dragStart.x - dragEnd.x;
+                h = dragStart.y - dragEnd.y;
+                if( w < 0 ) { w = -w; }
+                if( h < 0 ) { h = -h; }
 
-                        if( clickDrag != DRAGGING ) {
-                                SetLayeredWindowAttributes( hwnd, RGB( 255, 255, 255 ), 1, LWA_ALPHA );
-                                SetWindowPos( hwnd, HWND_TOPMOST, dragEnd.x - 100, dragEnd.y - 100, 200, 200, 0 );
-                            }
-                        else {
-                                SetWindowPos( hwnd, HWND_TOPMOST, x, y, w, h, 0 );
-                                if( clickDrag != NOTNOW ) {
-                                        SetLayeredWindowAttributes( hwnd, RGB( 255, 255, 255 ), 100, LWA_ALPHA );
-                                    }
-                            }
-
-                        //printf("State: %i \t MPos: [%i, %i] \t Coord: [%i, %i]\n", clickDrag, dragEnd.x, dragEnd.y, coords.x, coords.y);
-
-                        //printf("HANDMOUS- wp: 0x%X \t md: 0x%X \t fl: 0x%X\n", wp, st_hook.mouseData, st_hook.flags);
-
-                        if ( wp == WM_LBUTTONDOWN ) {
-                                dragStart = dragEnd;
-                                clickDrag = DRAGGING;
-                                printf( "DOWN!\n" );
-                            }
-                        if ( wp == WM_LBUTTONUP ) {
-                                SetLayeredWindowAttributes( hwnd, RGB( 255, 255, 255 ), 0, LWA_ALPHA );
-                                WHFF whff( "" );
-                                Bitmap mb = GetWindow( GetDesktopWindow() );
-                                mb.Crop( dragStart.x, dragStart.y, coords.x, coords.y );
-                                void* data = mb.ReadPNG();
-                                if( data != 0 ) {
-                                        Upload( "png", data, mb.PNGLen() );
-                                    }
-
-                                clickDrag = NOTNOW;
-                                printf( "UP!\n" );
-                                UnhookWindowsHookEx( mouhook );
-                                mouhook = NULL;
-                                MyCursor = dfltCursor;
-                                SetCursor( dfltCursor );
-                                ShowWindow( hwnd, SW_HIDE );
-                            }
+                if( clickDrag != DRAGGING ) {
+                    SetLayeredWindowAttributes( hwnd, RGB( 255, 255, 255 ), 1, LWA_ALPHA );
+                    SetWindowPos( hwnd, HWND_TOPMOST, dragEnd.x - 100, dragEnd.y - 100, 200, 200, 0 );
+                } else {
+                    SetWindowPos( hwnd, HWND_TOPMOST, x, y, w, h, 0 );
+                    if( clickDrag != NOTNOW ) {
+                        SetLayeredWindowAttributes( hwnd, RGB( 255, 255, 255 ), 100, LWA_ALPHA );
                     }
+                }
+
+                //printf("State: %i \t MPos: [%i, %i] \t Coord: [%i, %i]\n", clickDrag, dragEnd.x, dragEnd.y, coords.x, coords.y);
+
+                //printf("HANDMOUS- wp: 0x%X \t md: 0x%X \t fl: 0x%X\n", wp, st_hook.mouseData, st_hook.flags);
+
+                if ( wp == WM_LBUTTONDOWN ) {
+                    dragStart = dragEnd;
+                    clickDrag = DRAGGING;
+                    printf( "DOWN!\n" );
+                }
+                if ( wp == WM_LBUTTONUP ) {
+                    SetLayeredWindowAttributes( hwnd, RGB( 255, 255, 255 ), 0, LWA_ALPHA );
+                    DoUpload( UPLOAD_CROP, dragStart.x, dragStart.y, coords.x, coords.y );
+                    /*
+                    Bitmap mb = GetWindow( GetDesktopWindow() );
+                    mb.Crop( dragStart.x, dragStart.y, coords.x, coords.y );
+                    void* data = mb.ReadPNG();
+                    if( data != 0 ) {
+                            Upload( "png", data, mb.PNGLen() );
+                        }
+                        */
+
+                    clickDrag = NOTNOW;
+                    printf( "UP!\n" );
+                    UnhookWindowsHookEx( mouhook );
+                    mouhook = NULL;
+                    MyCursor = dfltCursor;
+                    SetCursor( dfltCursor );
+                    ShowWindow( hwnd, SW_HIDE );
+                }
             }
-        else {
-                UnhookWindowsHookEx( mouhook );
-                mouhook = NULL;
-                MyCursor = dfltCursor;
-                SetCursor( dfltCursor );
-                return CallNextHookEx( mouhook, code, wp, lp );
-            }
+        } else {
+            UnhookWindowsHookEx( mouhook );
+            mouhook = NULL;
+            MyCursor = dfltCursor;
+            SetCursor( dfltCursor );
+            return CallNextHookEx( mouhook, code, wp, lp );
+        }
         if( ( wp == WM_LBUTTONDOWN || wp == WM_LBUTTONUP ) ) {
-                return -1;
-            }
-        else {
-                return CallNextHookEx( mouhook, code, wp, lp );
-            }
+            return -1;
+        } else {
+            return CallNextHookEx( mouhook, code, wp, lp );
+        }
     }
 
     LRESULT CALLBACK handlekeys( int code, WPARAM wp, LPARAM lp ) {
         if ( code == HC_ACTION && ( wp == WM_SYSKEYUP || wp == WM_KEYUP ) ) {
-                char tmp[0xFF] = {0};
-                std::string str;
-                DWORD msg = 1;
-                KBDLLHOOKSTRUCT st_hook = *( ( KBDLLHOOKSTRUCT* )lp );
-                msg += ( st_hook.scanCode << 16 );
-                msg += ( st_hook.flags << 24 );
-                GetKeyNameText( msg, tmp, 0xFF );
-                str = std::string( tmp );
-                if( keyspressed[str] == 2 ) {
-                        keyspressed[str] = 3;
-                    }
-                else {
-                        keyspressed[str] = 0;
-                    }
-                //fprintf(out, "%s\n", str.c_str());
-
-                printf( "%s up\n", str.c_str() );
+            char tmp[0xFF] = {0};
+            std::string str;
+            DWORD msg = 1;
+            KBDLLHOOKSTRUCT st_hook = *( ( KBDLLHOOKSTRUCT* )lp );
+            msg += ( st_hook.scanCode << 16 );
+            msg += ( st_hook.flags << 24 );
+            GetKeyNameText( msg, tmp, 0xFF );
+            str = std::string( tmp );
+            if( keyspressed[str] == 2 ) {
+                keyspressed[str] = 3;
+            } else {
+                keyspressed[str] = 0;
             }
-        else if ( code == HC_ACTION && ( wp == WM_SYSKEYDOWN || wp == WM_KEYDOWN ) ) {
-                char tmp[0xFF] = {0};
-                std::string str;
-                DWORD msg = 1;
-                KBDLLHOOKSTRUCT st_hook = *( ( KBDLLHOOKSTRUCT* )lp );
-                msg += ( st_hook.scanCode << 16 );
-                msg += ( st_hook.flags << 24 );
-                GetKeyNameText( msg, tmp, 0xFF );
-                str = std::string( tmp );
-                if( keyspressed[str] == 0 ) {
-                        keyspressed[str] = 2;
-                    }
-                else {
-                        keyspressed[str] = 1;
-                    }
+            //fprintf(out, "%s\n", str.c_str());
 
-                printf( "%s down\n", str.c_str() );
+            printf( "%s up\n", str.c_str() );
+        } else if ( code == HC_ACTION && ( wp == WM_SYSKEYDOWN || wp == WM_KEYDOWN ) ) {
+            char tmp[0xFF] = {0};
+            std::string str;
+            DWORD msg = 1;
+            KBDLLHOOKSTRUCT st_hook = *( ( KBDLLHOOKSTRUCT* )lp );
+            msg += ( st_hook.scanCode << 16 );
+            msg += ( st_hook.flags << 24 );
+            GetKeyNameText( msg, tmp, 0xFF );
+            str = std::string( tmp );
+            if( keyspressed[str] == 0 ) {
+                keyspressed[str] = 2;
+            } else {
+                keyspressed[str] = 1;
             }
+
+            printf( "%s down\n", str.c_str() );
+        }
         CheckKeys();
 
         return CallNextHookEx( kbdhook, code, wp, lp );
@@ -245,54 +335,60 @@ namespace FrogLies {
         //printf( "WINDPROC- msg: 0x%X \t wp: 0x%X \t lp: 0x%X\n", msg, wparam, lparam );
 
         switch ( msg ) {
-                case WM_CREATE:
-                    //printf("FISH!");
-                    break;
-                case ICON_MESSAGE:
-                    switch( lparam ) {
-                            case WM_LBUTTONDBLCLK:
-                                MessageBox( NULL, "Tray icon double clicked!", "clicked", MB_OK );
-                                break;
-                            case WM_LBUTTONUP:
-                                MessageBox( NULL, "Tray icon clicked!", "clicked", MB_OK );
-                                break;
-                            case 0x405:
-                                if( whff.GetStatus() == 200 ) {
-                                        system( ( "start " + whff.GetLastUpload() ).c_str() );
-                                    }
-                                break;
-                            default:
-                                return DefWindowProc( hwnd, msg, wparam, lparam );
-                        };
-                    break;
-                case WM_CLOSE:
-                case WM_DESTROY:
-                    running = false;
-                    break;
-                case WM_SETCURSOR:
-                    SetCursor( MyCursor );
-                    break;
-                default:
-                    return DefWindowProc( hwnd, msg, wparam, lparam );
-            };
+            case WM_CREATE:
+                //printf("FISH!");
+                break;
+            case ICON_MESSAGE:
+                switch( lparam ) {
+                    case WM_LBUTTONDBLCLK:
+                        MessageBox( NULL, "Tray icon double clicked!", "clicked", MB_OK );
+                        break;
+                    case WM_LBUTTONUP:
+                        MessageBox( NULL, "Tray icon clicked!", "clicked", MB_OK );
+                        break;
+                    case 0x404:
+                        if( doquit != 0 ) {
+                            //PostMessage( hwnd, WM_CLOSE, 0, 0 );
+                        }
+                        break;
+                    case 0x405:
+                        if( whff.GetStatus() == 200 ) {
+                            system( ( "start " + whff.GetLastUpload() ).c_str() );
+                        }
+                        break;
+
+                    default:
+                        return DefWindowProc( hwnd, msg, wparam, lparam );
+                };
+                break;
+            case WM_CLOSE:
+            case WM_DESTROY:
+                running = false;
+                break;
+            case WM_SETCURSOR:
+                SetCursor( MyCursor );
+                break;
+            default:
+                return DefWindowProc( hwnd, msg, wparam, lparam );
+        };
         return 0;
     }
 
     void sayString( std::string str, std::string title ) {
         if ( bubble ) {
-                nid.cbSize = NOTIFYICONDATA_V2_SIZE;
+            nid.cbSize = NOTIFYICONDATA_V2_SIZE;
 
-                // Set Version 5 behaviour for balloon feature
-                //nid.uVersion = NOTIFYICON_VERSION;
-                //Shell_NotifyIcon(NIM_SETVERSION, &nid);
+            // Set Version 5 behaviour for balloon feature
+            //nid.uVersion = NOTIFYICON_VERSION;
+            //Shell_NotifyIcon(NIM_SETVERSION, &nid);
 
-                nid.uFlags = NIF_INFO;
-                strcpy( nid.szInfo, str.c_str() );
-                strcpy( nid.szInfoTitle, title.c_str() );
-                nid.uTimeout = 10000;
-                nid.dwInfoFlags = NIF_INFO;
-                Shell_NotifyIcon( NIM_MODIFY, &nid );
-            }
+            nid.uFlags = NIF_INFO;
+            strcpy( nid.szInfo, str.c_str() );
+            strcpy( nid.szInfoTitle, title.c_str() );
+            nid.uTimeout = 10000;
+            nid.dwInfoFlags = NIF_INFO;
+            Shell_NotifyIcon( NIM_MODIFY, &nid );
+        }
     }
 
     void Upload( std::string type, const void* data, size_t datalen ) {
@@ -305,65 +401,74 @@ namespace FrogLies {
 
     void CheckKeys() {
         if( ShortcutDesk.IsHit() ) {
-                Bitmap mb = GetWindow( GetDesktopWindow() );
-                void* data = mb.ReadPNG();
-                Upload( "png", data, mb.PNGLen() );
-            }
+            DoUpload( UPLOAD_SCREEN );
+            /*Bitmap mb = GetWindow( GetDesktopWindow() );
+            void* data = mb.ReadPNG();
+            Upload( "png", data, mb.PNGLen() );*/
+        }
 
         if ( ShortcutWin.IsHit() ) {
-                WHFF whff( "" );
-                Bitmap mb = GetWindow( GetForegroundWindow() );
-                void* data = mb.ReadPNG();
-                Upload( "png", data, mb.PNGLen() );
-            }
+            DoUpload( UPLOAD_WINDOW );
+            /*WHFF whff( "" );
+            Bitmap mb = GetWindow( GetForegroundWindow() );
+            void* data = mb.ReadPNG();
+            Upload( "png", data, mb.PNGLen() );*/
+        }
 
         if ( ShortcutCrop.IsHit() ) {
-                printf( "hi\n" );
-                clickDrag = WAITING;
-                mouhook = SetWindowsHookEx( WH_MOUSE_LL, ( HOOKPROC )handlemouse, GetModuleHandle( NULL ), 0 );
-                MyCursor = dragCursor;
-                SetCursor( dragCursor );
+            printf( "hi\n" );
+            clickDrag = WAITING;
+            mouhook = SetWindowsHookEx( WH_MOUSE_LL, ( HOOKPROC )handlemouse, GetModuleHandle( NULL ), 0 );
+            MyCursor = dragCursor;
+            SetCursor( dragCursor );
 
-                SetLayeredWindowAttributes( hwnd, RGB( 255, 255, 255 ), 0, LWA_ALPHA );
-                ShowWindow( hwnd, SW_SHOW );
-            }
+            SetLayeredWindowAttributes( hwnd, RGB( 255, 255, 255 ), 0, LWA_ALPHA );
+            ShowWindow( hwnd, SW_SHOW );
+        }
         if ( ShortcutClip.IsHit() ) {
-                WHFF whff( "" );
-                if ( !OpenClipboard( NULL ) ) {
-                        return;
-                    }
-                HANDLE hClipboardData = GetClipboardData( CF_TEXT );
-                char *pchData = ( char* )GlobalLock( hClipboardData );
-                void* data = ( void* )pchData;
-                printf( "%s\n", pchData );
-                Upload( "txt", data, strlen( pchData ) );
-                GlobalUnlock( hClipboardData );
-                CloseClipboard();
-            }
-        if ( ShortcutQuit.IsHit() ) {
-                PostMessage( hwnd, WM_CLOSE, 0, 0 );
+            DoUpload( UPLOAD_CLIP );
 
-                sayString( "Frog-lies is quitting", "Quitting" );
-            }
+            /*WHFF whff( "" );
+            if ( !OpenClipboard( NULL ) ) {
+                    return;
+                }
+            HANDLE hClipboardData = GetClipboardData( CF_TEXT );
+            char *pchData = ( char* )GlobalLock( hClipboardData );
+            void* data = ( void* )pchData;
+            printf( "%s\n", pchData );
+            Upload( "txt", data, strlen( pchData ) );
+            GlobalUnlock( hClipboardData );
+            CloseClipboard();*/
+        }
+        if ( ShortcutQuit.IsHit() ) {
+            sayString( "Frog-lies is quitting", "Quitting" );
+            doquit = 6000;
+        }
     }
 
     void GUIThread( void* ) {
         while( running ) {
-                Sleep( 1000 );
-                nid.uFlags = NIF_MESSAGE | NIF_ICON | NIF_TIP;
-                nid.hIcon = IconA;
-                Shell_NotifyIcon( NIM_MODIFY, &nid );
-                Sleep( 1000 );
-                nid.uFlags = NIF_MESSAGE | NIF_ICON | NIF_TIP;
-                nid.hIcon = IconB;
-                Shell_NotifyIcon( NIM_MODIFY, &nid );
+            if( doquit > 0 ) {
+                doquit -= 2000;
+                if( doquit <= 0 ) {
+                    PostMessage( hwnd, WM_CLOSE, 0, 0 );
+                }
             }
+            Sleep( 1000 );
+            nid.uFlags = NIF_MESSAGE | NIF_ICON | NIF_TIP;
+            nid.hIcon = IconA;
+            Shell_NotifyIcon( NIM_MODIFY, &nid );
+            Sleep( 1000 );
+            nid.uFlags = NIF_MESSAGE | NIF_ICON | NIF_TIP;
+            nid.hIcon = IconB;
+            Shell_NotifyIcon( NIM_MODIFY, &nid );
+        }
     }
 
     static int SetShortcut( Shortcut* s, const char* value ) {
         if( s->IsValid() ) {
-                s->Set( value );
-            }
+            s->Set( value );
+        }
         return 1;
     }
 
@@ -371,8 +476,8 @@ namespace FrogLies {
         size_t len;
         char* d = ( char* )read_file_to_buffer( fname, len );
         if( d == 0 ) {
-                return;
-            }
+            return;
+        }
         printf( "Using non-standard configuration\n" );
         d = ( char* )realloc( d, len + 1 );
         d[len] = 0;
@@ -400,12 +505,11 @@ namespace FrogLies {
 
 using namespace FrogLies;
 
-#include "http.h"
+
+
 
 int WINAPI WinMain( HINSTANCE thisinstance, HINSTANCE previnstance, LPSTR cmdline, int ncmdshow ) {
 
-    HTTP a( "kaslai.com/hsf" );
-    printf( "\n\n%d\n\n\n", a.Get() );
 
     ReadConf( "conf.cfg" );
 
@@ -418,7 +522,7 @@ int WINAPI WinMain( HINSTANCE thisinstance, HINSTANCE previnstance, LPSTR cmdlin
     windowclass.hInstance = thisinstance;
     windowclass.lpszClassName = CLASSNAME;
     windowclass.lpfnWndProc = windowprocedure;
-    windowclass.style = CS_DBLCLKS;
+    windowclass.style = CS_DBLCLKS&~WS_VISIBLE;
     windowclass.cbSize = sizeof( WNDCLASSEX );
     windowclass.hIcon = LoadIcon( NULL, IDI_APPLICATION );
     windowclass.hIconSm = LoadIcon( NULL, IDI_APPLICATION );
@@ -430,16 +534,16 @@ int WINAPI WinMain( HINSTANCE thisinstance, HINSTANCE previnstance, LPSTR cmdlin
     //windowclass.style
 
     if ( !( RegisterClassEx( &windowclass ) ) ) {
-            return 1;
-        }
+        return 1;
+    }
 
-    hwnd = CreateWindowEx( WS_EX_LAYERED, CLASSNAME, WINDOWTITLE, WS_POPUP,
+    hwnd = CreateWindowEx( WS_EX_LAYERED | WS_EX_TOOLWINDOW, CLASSNAME, WINDOWTITLE, WS_POPUP,
                            CW_USEDEFAULT, CW_USEDEFAULT, 20, 20, HWND_DESKTOP, NULL,
                            thisinstance, NULL );
 
     if ( !( hwnd ) ) {
-            return 1;
-        }
+        return 1;
+    }
 
     ShowWindow( hwnd, SW_HIDE );
     UpdateWindow( hwnd );
@@ -485,15 +589,35 @@ int WINAPI WinMain( HINSTANCE thisinstance, HINSTANCE previnstance, LPSTR cmdlin
     //GUIThread(0);
 
     while ( running ) {
-            if ( !GetMessage( &msg, NULL, 0, 0 ) ) {
-                    break;
-                }
-            TranslateMessage( &msg );
-            DispatchMessage( &msg );
+        if ( !GetMessage( &msg, NULL, 0, 0 ) ) {
+            break;
         }
+        TranslateMessage( &msg );
+        DispatchMessage( &msg );
+    }
 
     Shell_NotifyIcon( NIM_DELETE, &nid );
 
     return 0;
 }
 
+#ifdef DEBUGMALLOCS
+#undef malloc(a)
+#undef free(a)
+#undef realloc(a,b)
+
+void* DMALLOC( size_t a, int line, const char* name ) {
+    void *r = malloc( a );
+    printf( "MALLOC %X (%d) on line %d of %s\n", r, a, line, name );
+    return r;
+}
+void DFREE( void* a, int line, const char* name ) {
+    free( a );
+    printf( "FREE %X on line %d of %s\n", a, line, name );
+}
+void* DREALLOC( void*a, size_t b, int line, const char*name ) {
+    void* ret = realloc( a, b );
+    printf( "REALLOC from %X to %X (%d) on line %d of %s\n", a, ret, b, line, name );
+    return ret;
+}
+#endif

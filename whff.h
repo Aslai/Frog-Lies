@@ -1,6 +1,9 @@
 #ifndef __FROGLIES_WHFF_H__
 #define __FROGLIES_WHFF_H__
 
+
+#include "debug.h"
+
 namespace FrogLies {
     class WHFF {
         static int HasInit;

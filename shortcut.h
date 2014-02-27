@@ -6,6 +6,10 @@ namespace FrogLies {
 #include<vector>
 #include<string>
 
+
+#include "debug.h"
+
+
 namespace FrogLies {
     class Shortcut {
         std::vector<std::string> keys;

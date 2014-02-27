@@ -3,6 +3,9 @@
 #include<string>
 #include "shortcut.h"
 
+
+#include "debug.h"
+
 namespace FrogLies {
     int ReadKey( std::string key );
     void SetClipboard( std::string text );

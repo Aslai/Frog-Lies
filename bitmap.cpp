@@ -46,16 +46,20 @@ namespace FrogLies {
     Bitmap::~Bitmap() {
         ( *references )--;
         if( *references <= 0 ) {
-                if( Data != NULL ) {
-                        free( Data );
-                    }
-                delete references;
+            if( Data != NULL ) {
+                free( Data );
             }
+            delete references;
+        }
         if( pngdata != NULL ) {
-                free( pngdata );
-            }
+            free( pngdata );
+        }
     }
     void Bitmap::Write( int width, int height, void* data ) {
+
+        if( Data ) {
+            free( Data );
+        }
         Data = ( unsigned char* ) malloc( width * height * 4 );
         memcpy( Data, data, width * height * 4 );
         Width = width;
@@ -73,40 +77,40 @@ namespace FrogLies {
 
     void Bitmap::Crop( int x, int y, int w, int h ) {
         if( w < 0 ) {
-                x += w;
-                w = -w;
-            }
+            x += w;
+            w = -w;
+        }
         if( h < 0 ) {
-                y += h;
-                h = -h;
-            }
+            y += h;
+            h = -h;
+        }
 
         if( x < 0 ) {
-                w += x;
-                x = 0;
-            }
+            w += x;
+            x = 0;
+        }
         if( y < 0 ) {
-                h += y;
-                y = 0;
-            }
+            h += y;
+            y = 0;
+        }
         if( x >= ( int )Width ) {
-                x = Width - 1;
-            }
+            x = Width - 1;
+        }
         if( y >= ( int )Height ) {
-                y = Height - 1;
-            }
+            y = Height - 1;
+        }
         if( x + w > ( int )Width ) {
-                w = Width - x;
-            }
+            w = Width - x;
+        }
         if( y + h > ( int )Height ) {
-                h = Height - y;
-            }
+            h = Height - y;
+        }
 
         if( Data == 0 ) { return; }
         unsigned char* newdata = ( unsigned char* ) malloc( w * h * 4 );
         for( int i = 0; i < h; ++i ) {
-                memcpy( newdata + i * w * 4, Data + ( y + i )*Width * 4 + x * 4, w * 4 );
-            }
+            memcpy( newdata + i * w * 4, Data + ( y + i )*Width * 4 + x * 4, w * 4 );
+        }
         free( Data );
         Data = newdata;
         Width = w;
@@ -117,12 +121,12 @@ namespace FrogLies {
         //Bitmap* self = (Bitmap*) png_get_io_ptr(png_ptr);
         int changed = 0;
         while( self->pngpos + length > self->pnglen ) {
-                self->pnglen *= 2;
-                changed = 1;
-            }
+            self->pnglen *= 2;
+            changed = 1;
+        }
         if( changed ) {
-                self->pngdata = realloc( self->pngdata, self->pnglen );
-            }
+            self->pngdata = realloc( self->pngdata, self->pnglen );
+        }
         memcpy( ( unsigned char* )( self->pngdata ) + self->pngpos, data, length );
         self->pngpos += length;
     }
@@ -138,13 +142,13 @@ namespace FrogLies {
 
     void* Bitmap::ReadPNG() {
         if( Width == 0 || Height == 0 ) {
-                return NULL;
-            }
+            return NULL;
+        }
 
         self = this;
         if( pngdata ) {
-                free( pngdata );
-            }
+            free( pngdata );
+        }
         pnglen = 1000;
         pngpos = 0;
         pngdata = malloc( pnglen );
@@ -163,17 +167,17 @@ namespace FrogLies {
         /* Initialize the write struct. */
         png_ptr = png_create_write_struct( PNG_LIBPNG_VER_STRING, NULL, NULL, NULL );
         if ( png_ptr == NULL ) {
-                fclose( fp );
-                return 0;
-            }
+            fclose( fp );
+            return 0;
+        }
 
         /* Initialize the info struct. */
         info_ptr = png_create_info_struct( png_ptr );
         if ( info_ptr == NULL ) {
-                png_destroy_write_struct( &png_ptr, NULL );
-                fclose( fp );
-                return 0;
-            }
+            png_destroy_write_struct( &png_ptr, NULL );
+            fclose( fp );
+            return 0;
+        }
 
 
         /* Set image attributes. */
@@ -189,17 +193,17 @@ namespace FrogLies {
         /* Initialize rows of PNG. */
         row_pointers = ( png_byte** )png_malloc( png_ptr, Height * sizeof( png_byte * ) );
         for ( y = 0; y < Height; ++y ) {
-                uint8_t *row = ( uint8_t* )png_malloc( png_ptr, Width * sizeof( uint8_t ) * pixel_size );
-                row_pointers[y] = ( png_byte * )row;
-                for ( x = 0; x < Width; ++x ) {
-                        *row++ = Data[x * pixel_size + y * Width * pixel_size + 2];
-                        *row++ = Data[x * pixel_size + y * Width * pixel_size + 1];
-                        *row++ = Data[x * pixel_size + y * Width * pixel_size + 0];
+            uint8_t *row = ( uint8_t* )png_malloc( png_ptr, Width * sizeof( uint8_t ) * pixel_size );
+            row_pointers[y] = ( png_byte * )row;
+            for ( x = 0; x < Width; ++x ) {
+                *row++ = Data[x * pixel_size + y * Width * pixel_size + 2];
+                *row++ = Data[x * pixel_size + y * Width * pixel_size + 1];
+                *row++ = Data[x * pixel_size + y * Width * pixel_size + 0];
 
-                        //*row++ = Data[x*pixel_size+y*Width*pixel_size+3];
-                        *row++ = 0xFF;
-                    }
+                //*row++ = Data[x*pixel_size+y*Width*pixel_size+3];
+                *row++ = 0xFF;
             }
+        }
 
         /* Actually write the image data. */
         png_set_write_fn ( png_ptr, this, ( png_rw_ptr )pngwrite, ( png_flush_ptr )pngflush );
@@ -210,8 +214,8 @@ namespace FrogLies {
 
         /* Cleanup. */
         for ( y = 0; y < Height; y++ ) {
-                png_free( png_ptr, row_pointers[y] );
-            }
+            png_free( png_ptr, row_pointers[y] );
+        }
         png_free( png_ptr, row_pointers );
 
         /* Finish writing. */
@@ -228,11 +232,11 @@ namespace FrogLies {
 
         Bitmap ret;
         if( !GetClientRect( h, &rect ) ) {
-                return ret;
-            }
+            return ret;
+        }
         if( !GetWindowRect( h, &rect2 ) ) {
-                return ret;
-            }
+            return ret;
+        }
 
 
 
@@ -243,11 +247,11 @@ namespace FrogLies {
         int y = ( int )( rect2.top ); // + ((int)(rect.bottom-rect.top) - (int)(rect2.bottom-rect2.top)) - x;
 
         if( h == GetDesktopWindow() ) {
-                width = GetSystemMetrics ( SM_CXVIRTUALSCREEN );
-                height = GetSystemMetrics ( SM_CYVIRTUALSCREEN );
-                x = GetSystemMetrics ( SM_XVIRTUALSCREEN );
-                y = GetSystemMetrics ( SM_YVIRTUALSCREEN );
-            }
+            width = GetSystemMetrics ( SM_CXVIRTUALSCREEN );
+            height = GetSystemMetrics ( SM_CYVIRTUALSCREEN );
+            x = GetSystemMetrics ( SM_XVIRTUALSCREEN );
+            y = GetSystemMetrics ( SM_YVIRTUALSCREEN );
+        }
         h = GetDesktopWindow();
 
         HDC hDC = GetDC( h );
@@ -276,6 +280,7 @@ namespace FrogLies {
         GetDIBits( hCaptureDC, hCaptureBitmap, 0, height, ScreenData, ( BITMAPINFO* )&bmi, DIB_RGB_COLORS );
 
         ret.Write( width, height, ScreenData );
+        free( ScreenData );
 
 
         // SaveCapturedBitmap(hCaptureBitmap); //Place holder - Put your code

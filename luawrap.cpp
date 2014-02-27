@@ -16,8 +16,8 @@ int Lua::luapull::trythrow( int idx ) {
     if( lua_isnil( L, idx ) ) { return -1; }
     //printf("IDX: %d | ARGC: %d\n", idx, argc );
     if( argc + idx < 0 || idx > argc || idx == 0 ) {
-            return -1;
-        }
+        return -1;
+    }
     return 0;
 }
 int Lua::luapull::lua_push( std::string s ) {
@@ -51,45 +51,45 @@ int Lua::luapull::lua_push( void* s ) {
 
 std::string Lua::luapull::lua_ret( std::string, int pos ) {
     if( trythrow( pos ) == 0 ) {
-            return luaL_checkstring( L, pos );
-        }
+        return luaL_checkstring( L, pos );
+    }
     return "";
 }
 
 const char* Lua::luapull::lua_ret( const char*, int pos ) {
     if( trythrow( pos ) == 0 ) {
-            return luaL_checkstring( L, pos );
-        }
+        return luaL_checkstring( L, pos );
+    }
     return "";
 }
 
 int Lua::luapull::lua_ret( int , int pos ) {
     if( trythrow( pos ) == 0 ) {
-            return luaL_checkinteger( L, pos );
-        }
+        return luaL_checkinteger( L, pos );
+    }
     return 0;
 }
 
 double Lua::luapull::lua_ret( double, int pos ) {
     if( trythrow( pos ) == 0 ) {
-            return luaL_checknumber( L, pos );
-        }
+        return luaL_checknumber( L, pos );
+    }
     return 0;
 }
 
 void* Lua::luapull::lua_ret( void*, int pos ) {
     if( trythrow( pos ) == 0 ) {
-            return ( void* )luaL_checkint( L, pos );
-        }
+        return ( void* )luaL_checkint( L, pos );
+    }
     return 0;
 }
 
 
 void Lua::report_errors( lua_State *L, int status ) {
     if ( status != 0 ) {
-            printf( "-- %s\n", lua_tostring( L, -1 ) );
-            lua_pop( L, 1 ); // remove error message
-        }
+        printf( "-- %s\n", lua_tostring( L, -1 ) );
+        lua_pop( L, 1 ); // remove error message
+    }
 }
 
 
@@ -97,12 +97,11 @@ void *Lua::l_alloc ( void *ud, void *ptr, size_t osize, size_t nsize ) {
     ( void )ud;
     ( void )osize; /* not used */
     if ( nsize == 0 ) {
-            free( ptr );
-            return NULL;
-        }
-    else {
-            return realloc( ptr, nsize );
-        }
+        free( ptr );
+        return NULL;
+    } else {
+        return realloc( ptr, nsize );
+    }
 }
 
 
@@ -115,9 +114,9 @@ int Lua::panic( lua_State *l ) {
 
     printf( "ERROR [%i]: %s\n", lua_status( l ), lua_tostring( l, 1 ) );
     if( lua_status( l ) == 2 ) {
-            lua_getglobal( l, "__LastCalled" );
-            printf( "LAST CALLED: %s\n", luaL_checkstring( l, -1 ) );
-        }
+        lua_getglobal( l, "__LastCalled" );
+        printf( "LAST CALLED: %s\n", luaL_checkstring( l, -1 ) );
+    }
 
     throw( 2 );
 }
@@ -137,8 +136,8 @@ Lua::~Lua() {
 void Lua::run() {
     //printf("ERRORLEVEL: %i\n\n", errorlevel );
     if ( errorlevel == 0 ) {
-            errorlevel = lua_pcall( L, 0, LUA_MULTRET, 0 );
-        }
+        errorlevel = lua_pcall( L, 0, LUA_MULTRET, 0 );
+    }
 }
 
 

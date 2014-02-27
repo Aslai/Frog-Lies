@@ -2,6 +2,9 @@
 #include <cstdio>
 #include <cstdlib>
 
+#include "debug.h"
+
+
 namespace FrogLies {
     const char* mimes[] = {
         "3dm",          "x-world/x-3dmf",
@@ -650,10 +653,10 @@ namespace FrogLies {
     };
     std::string GetMimeFromExt( std::string ext ) {
         for( int i = 0; mimes[i] != 0; i += 2 ) {
-                if( ext == mimes[i] ) {
-                        return mimes[i + 1];
-                    }
+            if( ext == mimes[i] ) {
+                return mimes[i + 1];
             }
+        }
         return "application/octet-stream";
     }
 
@@ -665,25 +668,25 @@ namespace FrogLies {
         size_t i = 0;
 
         while( true ) {
-                size_t hasread = fread( ret + i, 1, length - i, f );
-                i += hasread;
-                if( feof( f ) ) {
-                        length = i;
-                        break;
-                    }
-                length *= 2;
-                ret = ( unsigned char* ) realloc( ret, length );
+            size_t hasread = fread( ret + i, 1, length - i, f );
+            i += hasread;
+            if( feof( f ) ) {
+                length = i;
+                break;
             }
+            length *= 2;
+            ret = ( unsigned char* ) realloc( ret, length );
+        }
         return ret;
     }
 
     std::string basename( std::string in ) {
         int pos = 0;
         for( int i = 0; in[i] != 0; ++i ) {
-                if( in[i] == '/' || in[i] == '\\' ) {
-                        pos = i + 1;
-                    }
+            if( in[i] == '/' || in[i] == '\\' ) {
+                pos = i + 1;
             }
+        }
         std::string ret = in.c_str() + pos;
         return ret;
     }
@@ -691,10 +694,10 @@ namespace FrogLies {
     std::string extension( std::string in ) {
         int pos = 0;
         for( int i = 0; in[i] != 0; ++i ) {
-                if( in[i] == '.' ) {
-                        pos = i + 1;
-                    }
+            if( in[i] == '.' ) {
+                pos = i + 1;
             }
+        }
         std::string ret = in.c_str() + pos;
         return ret;
     }

@@ -34,42 +34,42 @@ namespace FrogLies {
         bpos = 0;
 
         for( int i = 0; Template[i] != 0; i += 2 ) {
-                switch( Template[i][0] ) {
-                        case 'R':
-                        case 'r': {
-                                unsigned int rawlen = strlen( Template[i + 1] );
-                                while( bpos + rawlen >= bsize ) {
-                                        bsize *= 2;
-                                        buffer = ( char* ) realloc( buffer, bsize );
-                                    }
-                                bpos += sprintf( buffer + bpos, "%s", Template[i + 1] );
-                            }
-                            break;
-                        case 'S':
-                        case 's': {
-                                char* arg = va_arg( args, char* );
-                                unsigned int rawlen = strlen( arg );
-                                while( bpos + rawlen >= bsize ) {
-                                        bsize *= 2;
-                                        buffer = ( char* ) realloc( buffer, bsize );
-                                    }
-                                bpos += sprintf( buffer + bpos, "%s", arg );
-                            }
-                            break;
-                        case 'D':
-                        case 'd': {
-                                void* arg = va_arg( args, void* );
-                                unsigned int rawlen = va_arg( args, unsigned int );
-                                while( bpos + rawlen >= bsize ) {
-                                        bsize *= 2;
-                                        buffer = ( char* ) realloc( buffer, bsize );
-                                    }
-                                memcpy( buffer + bpos, arg, rawlen );
-                                bpos += rawlen;
-                            }
-                            break;
+            switch( Template[i][0] ) {
+                case 'R':
+                case 'r': {
+                        unsigned int rawlen = strlen( Template[i + 1] );
+                        while( bpos + rawlen >= bsize ) {
+                            bsize *= 2;
+                            buffer = ( char* ) realloc( buffer, bsize );
+                        }
+                        bpos += sprintf( buffer + bpos, "%s", Template[i + 1] );
                     }
+                    break;
+                case 'S':
+                case 's': {
+                        char* arg = va_arg( args, char* );
+                        unsigned int rawlen = strlen( arg );
+                        while( bpos + rawlen >= bsize ) {
+                            bsize *= 2;
+                            buffer = ( char* ) realloc( buffer, bsize );
+                        }
+                        bpos += sprintf( buffer + bpos, "%s", arg );
+                    }
+                    break;
+                case 'D':
+                case 'd': {
+                        void* arg = va_arg( args, void* );
+                        unsigned int rawlen = va_arg( args, unsigned int );
+                        while( bpos + rawlen >= bsize ) {
+                            bsize *= 2;
+                            buffer = ( char* ) realloc( buffer, bsize );
+                        }
+                        memcpy( buffer + bpos, arg, rawlen );
+                        bpos += rawlen;
+                    }
+                    break;
             }
+        }
         return buffer;
     }
 
@@ -81,11 +81,11 @@ namespace FrogLies {
 
     WHFF::WHFF( std::string owner ) {
         if( !HasInit ) {
-                HasInit = 1;
+            HasInit = 1;
 #ifdef USE_CURL
-                curl_global_init( CURL_GLOBAL_WIN32 );
+            curl_global_init( CURL_GLOBAL_WIN32 );
 #endif
-            }
+        }
         SetOwner( owner );
         laststatus = 0;
     }
@@ -95,14 +95,15 @@ namespace FrogLies {
     }
 
     size_t WHFF::callback( char *ptr, size_t size, size_t nmemb, void *userdata ) {
-        printf( "HAH %d|%s|", size * nmemb, ptr );
+        //printf( "HAH %d|%s|", size * nmemb, ptr );
         char* tmp = ( char* ) malloc( size * nmemb + 1 );
         memcpy( tmp, ptr, size * nmemb );
         tmp[size * nmemb] = 0;
         std::string value = tmp;
+        free( tmp );
         if( value.substr( 0, 5 ) != "Error" ) {
-                value = "http://fiel.tk/?i=" + value;
-            }
+            value = "http://fiel.tk/?i=" + value;
+        }
         WHFF* self = ( WHFF* ) userdata;
         self->LastUpload = value;
         return size * nmemb;
@@ -114,10 +115,10 @@ namespace FrogLies {
 
     int WHFF::Upload( std::string name, const void* data, size_t datalen, std::string mimetype, std::string password ) {
         for( unsigned int i = 0; i < name.length(); ++i ) {
-                if( name[i] == '\"' || name[i] < ' ' ) {
-                        name[i] = ' ';
-                    }
+            if( name[i] == '\"' || name[i] < ' ' ) {
+                name[i] = ' ';
             }
+        }
 
         const char * posttemplate[] = {
             "raw",  "-----------------------------28251299466151\r\n",
@@ -187,6 +188,7 @@ namespace FrogLies {
         size_t len;
         buffer = read_file_to_buffer( fname, len );
         Upload( basename( fname ), buffer, len, GetMimeFromExt( extension( fname ) ), password );
+        free( buffer );
         return 1;
     }
 
