@@ -74,6 +74,10 @@ namespace FrogLies{
 
     int WHFF::HasInit = 0;
 
+    WHFF::WHFF(){
+        WHFF("");
+    }
+
     WHFF::WHFF( std::string owner ) {
         if( !HasInit ) {
             HasInit = 1;

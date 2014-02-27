@@ -8,9 +8,15 @@
 #include <string>
 #include <map>
 
+#pragma once
+#ifndef _WIN32_IE
+#define _WIN32_IE 0x0600
+#endif
+
 #define WIN32_LEAN_AND_MEAN
 
 #include <windows.h>
+#include <mmsystem.h>
 #include <Windowsx.h>
 #include <commctrl.h>
 #include <shellapi.h>
@@ -53,11 +59,17 @@ namespace FrogLies{
     HCURSOR dfltCursor;
     HCURSOR MyCursor;
 
+    bool bubble;
+
+    WHFF whff("");
+
 
     void CheckKeys();
 
     std::map<std::string,int> keyspressed;
     std::string Timestamp();
+    void Upload( std::string type, const void* data, size_t datalen );
+    void sayString(const char* str, char* title);
     int ReadKey( std::string key ){
         if( keyspressed[key] == 2 ){
             keyspressed[key] = 1;
@@ -153,6 +165,7 @@ namespace FrogLies{
         if (clickDrag){
             if ((wp == WM_LBUTTONDOWN || wp == WM_LBUTTONUP || wp == WM_MOUSEMOVE)){
                 MSLLHOOKSTRUCT st_hook = *((MSLLHOOKSTRUCT*)lp);
+
                 dragEnd = st_hook.pt;
 
                 if (clickDrag == WAITING){
@@ -177,36 +190,15 @@ namespace FrogLies{
                     printf("DOWN!\n");
                 }
                 if (wp == WM_LBUTTONUP){
-<<<<<<< HEAD
                     //takeScreenShotAndClipTo(dragStart, dragEnd);
                     if (!(dragStart.x == dragEnd.x || dragStart.y == dragEnd.y)){
-                        WHFF whff("");
                         Bitmap mb = GetWindow(GetDesktopWindow());
-                        POINT xy;
-                        xy.x = (dragStart.x < dragEnd.x)?(dragStart.x):(dragEnd.x);
-                        xy.y = (dragStart.y < dragEnd.y)?(dragStart.y):(dragEnd.y);
-                        POINT wh;
-                        wh.x = (dragStart.x > dragEnd.x)?(dragStart.x):(dragEnd.x) - xy.x;
-                        wh.y = (dragStart.y < dragEnd.y)?(dragStart.y):(dragEnd.y) - xy.y;
-
-                        printf("x: %i, y: %i, w: %i, h: %i",xy.x, xy.y, wh.x, wh.y);
-
-                        mb.Crop(xy.x, xy.y, wh.x, wh.y);
-
+                        mb.Crop( dragStart.x, dragStart.y, coords.x, coords.y );
                         void* data = mb.ReadPNG();
-                        whff.Upload( Timestamp(), data, mb.PNGLen(), GetMimeFromExt("png"));
-                        SetClipboard( whff.GetLastUpload() );
+                        Upload("png", data, mb.PNGLen());
+
                     }
 
-=======
-                    WHFF whff("");
-                    Bitmap mb = GetWindow(GetDesktopWindow());
-                    mb.Crop( dragStart.x, dragStart.y, coords.x, coords.y );
-                    void* data = mb.ReadPNG();
-                    whff.Upload( Timestamp()+".png", data, mb.PNGLen(), GetMimeFromExt("png"));
-                    SetClipboard( whff.GetLastUpload() );
-
->>>>>>> 98f2a4a91ad174aee2a471a17b455fc1c5a29d2c
                     clickDrag = NOTNOW;
                     printf("UP!\n");
                     UnhookWindowsHookEx(mouhook);
@@ -301,29 +293,43 @@ namespace FrogLies{
         return 0;
     }
 
+    void sayString(const char* str, char* title){
+        if (bubble){
+            nid.cbSize = NOTIFYICONDATA_V2_SIZE;
+
+            // Set Version 5 behaviour for balloon feature
+            //nid.uVersion = NOTIFYICON_VERSION;
+            //Shell_NotifyIcon(NIM_SETVERSION, &nid);
+
+            nid.uFlags = NIF_INFO;
+            strcpy(nid.szInfo, str);
+            strcpy(nid.szInfoTitle, title);
+            nid.uTimeout = 10000;
+            nid.dwInfoFlags = NIF_INFO;
+            Shell_NotifyIcon(NIM_MODIFY, &nid);
+        }
+    }
+
+    void Upload( std::string type, const void* data, size_t datalen ){
+        std::string str = Timestamp() + "." + type;
+        whff.Upload( str, data, datalen, GetMimeFromExt(type));
+        SetClipboard( whff.GetLastUpload() );
+        sayString((Timestamp() + ".txt has been uploaded...").c_str(),"Screenshot Taken");
+        PlaySound(TEXT("snd/success2.wav"), NULL, SND_FILENAME);
+    }
+
     void CheckKeys(){
             if( ShortcutDesk.IsHit() ){
-                WHFF whff("");
                 Bitmap mb = GetWindow(GetDesktopWindow());
                 void* data = mb.ReadPNG();
-<<<<<<< HEAD
-                whff.Upload( Timestamp() + ".png", data, mb.PNGLen(), GetMimeFromExt("png"));
-=======
-                whff.Upload( Timestamp()+".png", data, mb.PNGLen(), GetMimeFromExt("png"));
->>>>>>> 98f2a4a91ad174aee2a471a17b455fc1c5a29d2c
-                SetClipboard( whff.GetLastUpload() );
+                Upload( "png", data, mb.PNGLen());
             }
 
             if (ShortcutWin.IsHit()) {
                 WHFF whff("");
                 Bitmap mb = GetWindow(GetForegroundWindow());
                 void* data = mb.ReadPNG();
-<<<<<<< HEAD
-                whff.Upload( Timestamp() + ".png", data, mb.PNGLen(), GetMimeFromExt("png"));
-=======
-                whff.Upload( Timestamp()+".png", data, mb.PNGLen(), GetMimeFromExt("png"));
->>>>>>> 98f2a4a91ad174aee2a471a17b455fc1c5a29d2c
-                SetClipboard( whff.GetLastUpload() );
+                Upload( "png", data, mb.PNGLen());
             }
 
             if (ShortcutCrop.IsHit()) {
@@ -341,22 +347,25 @@ namespace FrogLies{
                 char *pchData = (char*)GlobalLock(hClipboardData);
                 void* data = (void*)pchData;
                 printf("%s\n", pchData);
-                whff.Upload( Timestamp()+".txt", data, strlen(pchData), GetMimeFromExt("txt"));
+                Upload( "txt", data, strlen(pchData));
                 GlobalUnlock(hClipboardData);
                 CloseClipboard();
-                SetClipboard( whff.GetLastUpload() );
             }
             if (ShortcutQuit.IsHit()) {
                 PostMessage( hwnd, WM_CLOSE, 0, 0 );
+
+                sayString("Frog-lies is quitting","Quitting");
             }
     }
 
     void GUIThread( void* ){
         while( running ){
             Sleep(1000);
+            nid.uFlags = NIF_MESSAGE | NIF_ICON | NIF_TIP;
             nid.hIcon = IconA;
             Shell_NotifyIcon(NIM_MODIFY, &nid);
             Sleep(1000);
+            nid.uFlags = NIF_MESSAGE | NIF_ICON | NIF_TIP;
             nid.hIcon = IconB;
             Shell_NotifyIcon(NIM_MODIFY, &nid);
         }
@@ -382,13 +391,19 @@ namespace FrogLies{
 
         Lua L( buff.c_str(), "Configuration", 0 );
         L.funcreg<int, Shortcut*, const char*, SetShortcut >("shortcut");
+        L.set("TRUE", 1);
         L.set("SHORTCUT_WIN",  &ShortcutWin);
         L.set("SHORTCUT_DESK", &ShortcutDesk);
         L.set("SHORTCUT_CROP", &ShortcutCrop);
         L.set("SHORTCUT_CLIP", &ShortcutClip);
         L.set("SHORTCUT_QUIT", &ShortcutQuit);
+        L.set("SHORTCUT_QUIT", &ShortcutQuit);
+        L.set("true", 1);
+        L.set("false", 1);
 
         L.run();
+
+        bubble = L.get<int>("bubble");
     }
 }
 
@@ -461,6 +476,8 @@ int WINAPI WinMain(HINSTANCE thisinstance, HINSTANCE previnstance, LPSTR cmdline
 	mouhook = NULL;
 
     running = true;
+
+    sayString("Frog-lies has started...","Startup");
 
     _beginthread( GUIThread, 1000, NULL );
     //GUIThread(0);
