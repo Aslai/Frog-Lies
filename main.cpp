@@ -228,10 +228,13 @@ namespace FrogLies{
             }
             if (ShortcutClip.IsHit()) {
                 WHFF whff("");
+                if (!OpenClipboard(NULL))
+                    return;
                 HANDLE hClipboardData = GetClipboardData(CF_TEXT);
                 char *pchData = (char*)GlobalLock(hClipboardData);
                 void* data = (void*)pchData;
-                whff.Upload( Timestamp(), data, strlen(pchData), GetMimeFromExt("txt"));
+                printf("%s\n", pchData);
+                whff.Upload( Timestamp()+".txt", data, strlen(pchData), GetMimeFromExt("txt"));
                 GlobalUnlock(hClipboardData);
                 CloseClipboard();
                 SetClipboard( whff.GetLastUpload() );
