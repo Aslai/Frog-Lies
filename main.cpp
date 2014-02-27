@@ -109,6 +109,8 @@ namespace FrogLies{
                     //takeScreenShotAndClipTo(dragStart, dragEnd);
                     clickDrag = NOTNOW;
                     printf("UP!\n");
+                    UnhookWindowsHookEx(mouhook);
+                    mouhook = NULL;
                     SetCursor(dfltCursor);
                 }
             }
@@ -224,6 +226,7 @@ namespace FrogLies{
             if (ShortcutCrop.IsHit()) {
                 printf("hi\n");
                 clickDrag = WAITING;
+                mouhook = SetWindowsHookEx(WH_MOUSE_LL, (HOOKPROC)handlemouse, GetModuleHandle(NULL), 0);
                 SetCursor(dragCursor);
             }
             if (ShortcutClip.IsHit()) {
@@ -325,8 +328,11 @@ int WINAPI WinMain(HINSTANCE thisinstance, HINSTANCE previnstance, LPSTR cmdline
     dragCursor = LoadCursor(thisinstance, IDC_CROSS);
     dfltCursor = GetCursor();
 
+    modulehandle = GetModuleHandle(NULL);
+
     //#define BEGIN_IN_DRAGMODE
     #ifdef BEGIN_IN_DRAGMODE
+	mouhook = SetWindowsHookEx(WH_MOUSE_LL, (HOOKPROC)handlemouse, modulehandle, 0);
     SetCursor(dragCursor);
     clickDrag = WAITING;
     #endif
@@ -345,10 +351,8 @@ int WINAPI WinMain(HINSTANCE thisinstance, HINSTANCE previnstance, LPSTR cmdline
     nid.uFlags = NIF_MESSAGE | NIF_ICON | NIF_TIP;
 
     Shell_NotifyIcon(NIM_ADD, &nid);
-
-    modulehandle = GetModuleHandle(NULL);
 	kbdhook = SetWindowsHookEx(WH_KEYBOARD_LL, (HOOKPROC)handlekeys, modulehandle, 0);
-	mouhook = SetWindowsHookEx(WH_MOUSE_LL, (HOOKPROC)handlemouse, modulehandle, 0);
+	mouhook = NULL;
 
     running = true;
 
@@ -366,3 +370,4 @@ int WINAPI WinMain(HINSTANCE thisinstance, HINSTANCE previnstance, LPSTR cmdline
 
 	return 0;
 }
+
