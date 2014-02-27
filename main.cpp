@@ -474,11 +474,11 @@ namespace FrogLies {
                     PostMessage( hwnd, WM_CLOSE, 0, 0 );
                 }
             }
-            Sleep( 100 );
+            Sleep( 1000 );
             nid.uFlags = NIF_MESSAGE | NIF_ICON | NIF_TIP;
             nid.hIcon = IconA;
             Shell_NotifyIcon( NIM_MODIFY, &nid );
-            Sleep( 100 );
+            Sleep( 1000 );
             nid.uFlags = NIF_MESSAGE | NIF_ICON | NIF_TIP;
             nid.hIcon = IconB;
             Shell_NotifyIcon( NIM_MODIFY, &nid );
