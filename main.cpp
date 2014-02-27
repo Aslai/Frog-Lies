@@ -37,16 +37,27 @@
 #include "froglies.h"
 #include "mutex.h"
 
-
 #define CLASSNAME   "winss"
 #define WINDOWTITLE "FrogLies"
 #define ICON_MESSAGE (WM_USER + 1)
 
-#define NOTNOW 0
-#define WAITING 1
-#define DRAGGING 2
-
 namespace FrogLies {
+    enum{
+        NOTNOW = 0,
+        WAITING,
+        DRAGGING
+    };
+    enum{
+        MENU_NAME = 3000,
+        MENU_RECENTS,
+        MENU_SS_WIND,
+        MENU_SS_SCRN,
+        MENU_SS_CROP,
+        MENU_SS_CLIP,
+        MENU_DISABLE,
+        MENU_SETTING,
+        MENU_EXIT
+    };
     enum {
         UPLOAD_NONE = -1,
         UPLOAD_WINDOW,
@@ -59,6 +70,7 @@ namespace FrogLies {
     HHOOK kbdhook;
     HHOOK mouhook;
     HWND hwnd;
+    HMENU menu;
     NOTIFYICONDATA nid;
     HICON IconA;
     HICON IconB;
@@ -346,18 +358,81 @@ namespace FrogLies {
 
         //printf( "WINDPROC- msg: 0x%X \t wp: 0x%X \t lp: 0x%X\n", msg, wparam, lparam );
 
-        switch ( msg ) {
+        POINT curPoint;
+        UINT clicked;
+
+        switch (msg){
             case WM_CREATE:
-                //printf("FISH!");
+                menu = CreatePopupMenu();
+                AppendMenu(menu, MF_STRING | MF_DISABLED, MENU_NAME, "Frog-Lies");
+
+                AppendMenu(menu, MF_SEPARATOR, NULL, NULL);
+
+                AppendMenu(menu, MF_STRING | MF_GRAYED, MENU_RECENTS, "Recently uploaded...");
+
+                AppendMenu(menu, MF_SEPARATOR, NULL, NULL);
+
+                AppendMenu(menu, MF_STRING, MENU_SS_WIND, "Screenshot Current Window");
+                AppendMenu(menu, MF_STRING, MENU_SS_SCRN, "Screenshot Entire Screen");
+                AppendMenu(menu, MF_STRING, MENU_SS_CROP, "Screenshot an Area of the Screen");
+                AppendMenu(menu, MF_STRING, MENU_SS_CLIP, "Upload Clipboard");
+
+                AppendMenu(menu, MF_SEPARATOR, NULL, NULL);
+
+                AppendMenu(menu, MF_STRING, MENU_DISABLE, "Disable Uploading"); // | MF_CHECKED
+                AppendMenu(menu, MF_STRING, MENU_SETTING, "Settings");
+
+                AppendMenu(menu, MF_SEPARATOR, NULL, NULL);
+
+                AppendMenu(menu, MF_STRING, MENU_EXIT, "Exit");
                 break;
             case ICON_MESSAGE:
-                switch( lparam ) {
+                switch(lparam){
+                    case WM_RBUTTONDOWN:
+                        GetCursorPos(&curPoint) ;
+
+                        //SetForegroundWindow(hwnd);
+
+                        clicked = TrackPopupMenuEx(menu, TPM_RETURNCMD | TPM_NONOTIFY, curPoint.x, curPoint.y, hwnd, NULL);
+
+
+                        SendMessage(hwnd, WM_NULL, 0, 0);
+
+                        switch (clicked){
+                            case MENU_EXIT:
+                                sayString( "Frog-lies is quitting", "Quitting" );
+                                doquit = 6000;
+                                break;
+                            case MENU_SS_WIND:
+                                DoUpload( UPLOAD_WINDOW );
+                                break;
+                            case MENU_SS_SCRN:
+                                DoUpload( UPLOAD_SCREEN );
+                                break;
+                            case MENU_SS_CROP:
+                                clickDrag = WAITING;
+                                mouhook = SetWindowsHookEx( WH_MOUSE_LL, ( HOOKPROC )handlemouse, GetModuleHandle( NULL ), 0 );
+                                MyCursor = dragCursor;
+                                SetCursor( dragCursor );
+
+                                SetLayeredWindowAttributes( hwnd, RGB( 255, 255, 255 ), 0, LWA_ALPHA );
+                                ShowWindow( hwnd, SW_SHOW );
+                            case MENU_SS_CLIP:
+                                DoUpload( UPLOAD_CLIP );
+                            default:
+                                return DefWindowProc( hwnd, msg, wparam, lparam );
+                        };
+
+                        //SendMessage(hwnd, WM_NULL, 0, 0);
+                        break;
+                        /*
                     case WM_LBUTTONDBLCLK:
                         MessageBox( NULL, "Tray icon double clicked!", "clicked", MB_OK );
                         break;
                     case WM_LBUTTONUP:
                         MessageBox( NULL, "Tray icon clicked!", "clicked", MB_OK );
                         break;
+                        */
                     case 0x404:
                         if( doquit != 0 ) {
                             //PostMessage( hwnd, WM_CLOSE, 0, 0 );
@@ -368,7 +443,6 @@ namespace FrogLies {
                             system( ( "start " + whff.GetLastUpload() ).c_str() );
                         }
                         break;
-
                     default:
                         return DefWindowProc( hwnd, msg, wparam, lparam );
                 };
