@@ -70,14 +70,14 @@ namespace FrogLies{
     }
 
     void Bitmap::Crop( int x, int y, int w, int h ) {
-        /*if( w < 0 ){
+        if( w < 0 ){
             x += w;
             w = -w;
         }
         if( h < 0 ){
             y += h;
             h = -h;
-        }*/
+        }
 
         if( x < 0 ) {
             w += x;
