@@ -407,7 +407,7 @@ namespace FrogLies {
         std::string str = Timestamp() + "." + type;
         whff.Upload( str, data, datalen, GetMimeFromExt( type ) );
         SetClipboard( whff.GetLastUpload() );
-        sayString( Timestamp() + type + " has been uploaded...", "Screenshot Taken" );
+        sayString( Timestamp() + "." + type + " has been uploaded...", "Screenshot Taken" );
         PlaySound( MAKEINTRESOURCE( 3 ), GetModuleHandle( NULL ), SND_ASYNC | SND_RESOURCE );
     }
 
@@ -436,6 +436,14 @@ namespace FrogLies {
 
             SetLayeredWindowAttributes( hwnd, RGB( 255, 255, 255 ), 0, LWA_ALPHA );
             ShowWindow( hwnd, SW_SHOW );
+        }
+        if (ShortcutStop.IsHit()){
+            clickDrag = NOTNOW;
+            UnhookWindowsHookEx( mouhook );
+            mouhook = NULL;
+            MyCursor = dfltCursor;
+            SetCursor( dfltCursor );
+            ShowWindow( hwnd, SW_HIDE );
         }
         if ( ShortcutClip.IsHit() ) {
             DoUpload( UPLOAD_CLIP );
@@ -504,7 +512,7 @@ namespace FrogLies {
         L.set( "SHORTCUT_CROP", &ShortcutCrop );
         L.set( "SHORTCUT_CLIP", &ShortcutClip );
         L.set( "SHORTCUT_QUIT", &ShortcutQuit );
-        L.set( "SHORTCUT_QUIT", &ShortcutQuit );
+        L.set( "SHORTCUT_STOP", &ShortcutStop );
         L.set( "true", 1 );
         L.set( "false", 1 );
 
@@ -568,12 +576,14 @@ int WINAPI WinMain( HINSTANCE thisinstance, HINSTANCE previnstance, LPSTR cmdlin
 
     modulehandle = GetModuleHandle( NULL );
 
-    //#define BEGIN_IN_DRAGMODE
+    #define BEGIN_IN_DRAGMODE
 #ifdef BEGIN_IN_DRAGMODE
     mouhook = SetWindowsHookEx( WH_MOUSE_LL, ( HOOKPROC )handlemouse, modulehandle, 0 );
     MyCursor = dragCursor;
     SetCursor( dragCursor );
     clickDrag = WAITING;
+    SetLayeredWindowAttributes( hwnd, RGB( 255, 255, 255 ), 0, LWA_ALPHA );
+    ShowWindow( hwnd, SW_SHOW );
 #endif
 
     IconA = LoadIcon( thisinstance, MAKEINTRESOURCE( 1 ) );
@@ -586,7 +596,7 @@ int WINAPI WinMain( HINSTANCE thisinstance, HINSTANCE previnstance, LPSTR cmdlin
     //nid.uVersion = NOTIFYICON_VERSION;
     nid.uCallbackMessage = ICON_MESSAGE;
     nid.hIcon = IconB; //= LoadIcon(NULL, IDI_APPLICATION);
-    snprintf( nid.szTip, 64, "Icon" );
+    snprintf( nid.szTip, 64, "Frog-lies" );
     nid.uFlags = NIF_MESSAGE | NIF_ICON | NIF_TIP;
 
     Shell_NotifyIcon( NIM_ADD, &nid );

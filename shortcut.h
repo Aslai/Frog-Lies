@@ -20,7 +20,7 @@ namespace FrogLies {
         int IsHit();
         int IsValid( );
     };
-    extern Shortcut ShortcutWin, ShortcutDesk, ShortcutCrop, ShortcutClip, ShortcutQuit;
+    extern Shortcut ShortcutWin, ShortcutDesk, ShortcutCrop, ShortcutClip, ShortcutQuit, ShortcutStop;
 }
 
 #endif

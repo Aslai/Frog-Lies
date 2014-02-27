@@ -5,7 +5,7 @@ namespace FrogLies {
     std::vector<Shortcut*> Shortcut::Shortcuts;
     Shortcut    ShortcutWin ( "Ctrl Alt 2" ), ShortcutDesk( "Ctrl Alt 3" ),
                 ShortcutCrop( "Ctrl Alt 4" ), ShortcutClip( "Ctrl Alt 5" ),
-                ShortcutQuit( "Ctrl Alt Q" );
+                ShortcutQuit( "Ctrl Alt Q" ), ShortcutStop( "Esc" );
 
     Shortcut::Shortcut( std::string val ) {
         Set( val );
