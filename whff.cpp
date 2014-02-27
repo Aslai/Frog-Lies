@@ -18,6 +18,7 @@
 #include <process.h>
 #include "png.h"
 #include <curl/curl.h>
+#include "http.h"
 
 
 #include "files.h"
@@ -81,7 +82,9 @@ namespace FrogLies{
     WHFF::WHFF( std::string owner ) {
         if( !HasInit ) {
             HasInit = 1;
+            #ifdef USE_CURL
             curl_global_init(CURL_GLOBAL_WIN32);
+            #endif
         }
         SetOwner( owner );
     }
@@ -141,6 +144,7 @@ namespace FrogLies{
 
         printf("%s\n", (char*) postobject );
 
+        #ifdef USE_CURL
         CURL *curl = curl_easy_init();
         curl_easy_setopt(curl, CURLOPT_VERBOSE, 1);
         const char *theUrl = "http://frogbox.es/whff/upload.php?raw";
@@ -160,6 +164,17 @@ namespace FrogLies{
         curl_easy_perform(curl);
         curl_slist_free_all(headers);
         curl_easy_cleanup(curl);
+        #else
+        HTTP http("http://frogbox.es/whff/upload.php?raw");
+        http.SetHeader( "Content-Type: multipart/form-data; boundary=---------------------------28251299466151" );
+
+        http.Post( postobject, length );
+        size_t length2;
+        char* c = (char*)http.GetData(length2);
+
+        callback( c, length2, 1, this );
+        #endif
+
         free( postobject );
         return 1;
     }

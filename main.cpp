@@ -8,7 +8,6 @@
 #include <string>
 #include <map>
 
-#pragma once
 #ifndef _WIN32_IE
 #define _WIN32_IE 0x0600
 #endif
@@ -222,6 +221,7 @@ namespace FrogLies{
                     mouhook = NULL;
                     MyCursor = dfltCursor;
                     SetCursor(dfltCursor);
+                    ShowWindow(hwnd, SW_HIDE);
                 }
             }
         }
@@ -331,8 +331,8 @@ namespace FrogLies{
         std::string str = Timestamp() + "." + type;
         whff.Upload( str, data, datalen, GetMimeFromExt(type));
         SetClipboard( whff.GetLastUpload() );
-        sayString((Timestamp() + ".txt has been uploaded...").c_str(),"Screenshot Taken");
-        PlaySound(TEXT("snd/success2.wav"), NULL, SND_FILENAME);
+        sayString((Timestamp() + type + " has been uploaded...").c_str(),"Screenshot Taken");
+        PlaySound(MAKEINTRESOURCE(3), GetModuleHandle(NULL), SND_ASYNC | SND_RESOURCE);
     }
 
     void CheckKeys(){
@@ -355,7 +355,9 @@ namespace FrogLies{
                 mouhook = SetWindowsHookEx(WH_MOUSE_LL, (HOOKPROC)handlemouse, GetModuleHandle(NULL), 0);
                 MyCursor = dragCursor;
                 SetCursor(dragCursor);
+
                 SetLayeredWindowAttributes(hwnd, RGB(255,255,255), 0, LWA_ALPHA);
+                ShowWindow(hwnd, SW_SHOW);
             }
             if (ShortcutClip.IsHit()) {
                 WHFF whff("");
@@ -428,10 +430,12 @@ namespace FrogLies{
 
 using namespace FrogLies;
 
+
+
 int WINAPI WinMain(HINSTANCE thisinstance, HINSTANCE previnstance, LPSTR cmdline, int ncmdshow){
 
-
     ReadConf( "conf.cfg" );
+
 
 	HWND		fgwindow = GetForegroundWindow(); /* Current foreground window */
 	MSG		    msg;
@@ -460,7 +464,7 @@ int WINAPI WinMain(HINSTANCE thisinstance, HINSTANCE previnstance, LPSTR cmdline
 
 	if (!(hwnd)){ return 1; }
 
-    ShowWindow(hwnd, SW_SHOW);
+    ShowWindow(hwnd, SW_HIDE);
 	UpdateWindow(hwnd);
 	SetForegroundWindow(fgwindow); /* Give focus to the previous fg window */
 
@@ -479,8 +483,8 @@ int WINAPI WinMain(HINSTANCE thisinstance, HINSTANCE previnstance, LPSTR cmdline
     clickDrag = WAITING;
     #endif
 
-    IconA = (HICON) LoadImage( thisinstance, "img/icona.ico", IMAGE_ICON, 32, 32, LR_LOADFROMFILE );
-    IconB = (HICON) LoadImage( thisinstance, "img/iconb.ico", IMAGE_ICON, 32, 32, LR_LOADFROMFILE );
+    IconA = LoadIcon( thisinstance, MAKEINTRESOURCE( 1 ) );
+    IconB = LoadIcon( thisinstance, MAKEINTRESOURCE( 2 ) );
 
 
     nid.cbSize = sizeof(NOTIFYICONDATA);
