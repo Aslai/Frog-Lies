@@ -503,7 +503,6 @@ namespace FrogLies {
         }
 
         if ( ShortcutCrop.IsHit() ) {
-            printf( "hi\n" );
             clickDrag = WAITING;
             mouhook = SetWindowsHookEx( WH_MOUSE_LL, ( HOOKPROC )handlemouse, GetModuleHandle( NULL ), 0 );
             MyCursor = dragCursor;
@@ -683,16 +682,46 @@ std::vector<std::string> ParseCmdLine( const char* cmdline ) {
 
 void HandleArgs( const char* cmdline ) {
     std::vector< std::string > args = ParseCmdLine( cmdline );
-
-    for( int i = 0; i < args.size(); ++i ) {
-        printf( "%s\n", args[i].c_str() );
+    if (args.size() == 0){
+        return;
     }
+    if (args[0].compare("-window") == 0){
+        DoUpload( UPLOAD_WINDOW );
+    }
+    if (args[0].compare("-screen") == 0){
+        DoUpload( UPLOAD_SCREEN );
+    }
+    if (args[0].compare("-clip") == 0){
+        DoUpload( UPLOAD_CLIP );
+    }
+    if (args[0].compare("-crop") == 0){
+        int passargs[4];
+        if (args.size() == 5){
+            passargs[0] = strtol(args[1].c_str(), NULL, 10);
+            passargs[1] = strtol(args[2].c_str(), NULL, 10);
+            passargs[2] = strtol(args[3].c_str(), NULL, 10);
+            passargs[3] = strtol(args[4].c_str(), NULL, 10);
+            if (passargs[0] == 0 || passargs[1] == 0 || passargs[2] == 0 || passargs[3] == 0) {
+             sayString( "Non-int CLI for crop.", "Error" );
+            }
+            Bitmap mb = GetWindow( GetDesktopWindow() );
+            mb.Crop( passargs[0], passargs[1], passargs[2], passargs[3] );
+            void* data = mb.ReadPNG();
+            if( data != 0 ) {
+                Upload( "png", data, mb.PNGLen() );
+            }
+        }
+        else {
+            sayString( "Invalid number of CLIs for crop.", "Error" );
+        }
+    }
+
 }
 
 
 int WINAPI WinMain( HINSTANCE thisinstance, HINSTANCE previnstance, LPSTR cmdline, int ncmdshow ) {
     //printf("%s\n", cmdline );
-    HandleArgs( "This is a \"TESTING SPACES\" lel\\ heh and nu\\nmber! \\x41\\x48" );
+    HandleArgs( cmdline );
     ReadConf( "conf.cfg" );
 
 
