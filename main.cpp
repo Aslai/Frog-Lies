@@ -5,8 +5,13 @@
 #include <memory.h>
 #include <string.h>
 #include <tchar.h>
+#include <ctime>
+#include <cstring>
+#include <cctype>
 #include <string>
 #include <map>
+#include <vector>
+#include <deque>
 
 #ifndef _WIN32_IE
 #define _WIN32_IE 0x0600
@@ -24,16 +29,11 @@
 #include <Shlwapi.h>
 #include <process.h>
 #include <Winuser.h>
-#include <vector>
-#include <ctime>
-#include <cstring>
-#include <deque>
-#include <cctype>
+#include <direct.h>
 
 #include "files.h"
 #include "whff.h"
 #include "bitmap.h"
-#include <map>
 #include "luawrap.h"
 #include "froglies.h"
 #include "mutex.h"
@@ -83,6 +83,8 @@ namespace FrogLies {
     HCURSOR dragCursor;
     HCURSOR dfltCursor;
     HCURSOR MyCursor;
+
+    char* copyLoc;
 
     int doquit = 0;
 
@@ -228,8 +230,14 @@ namespace FrogLies {
         int i = 0;
         while ( str[i] ) {
             i++;
-            if ( str[i] == ' ' ) {
+            if ( str[i] == ' ') {
                 str[i] = '_';
+            }
+            if (str[i] == '\n'){
+                str[i] = '\0';
+            }
+            if (str[i] == ':'){
+                str[i] = '.';
             }
         }
         std::string ToReturn( str );
@@ -391,12 +399,10 @@ namespace FrogLies {
                 switch( lparam ) {
                     case WM_RBUTTONDOWN:
                         GetCursorPos( &curPoint ) ;
-
                         //SetForegroundWindow(hwnd);
-
+                        //SetCursor( dfltCursor );
                         clicked = TrackPopupMenuEx( menu, TPM_RETURNCMD | TPM_NONOTIFY, curPoint.x, curPoint.y, hwnd, NULL );
-
-
+                        //SetCursor( dfltCursor );
                         SendMessage( hwnd, WM_NULL, 0, 0 );
 
                         switch ( clicked ) {
@@ -418,8 +424,10 @@ namespace FrogLies {
 
                                 SetLayeredWindowAttributes( hwnd, RGB( 255, 255, 255 ), 0, LWA_ALPHA );
                                 ShowWindow( hwnd, SW_SHOW );
+                                break;
                             case MENU_SS_CLIP:
                                 DoUpload( UPLOAD_CLIP );
+                                break;
                             default:
                                 return DefWindowProc( hwnd, msg, wparam, lparam );
                         };
@@ -480,7 +488,27 @@ namespace FrogLies {
 
     void Upload( std::string type, const void* data, size_t datalen ) {
         std::string str = Timestamp() + "." + type;
+
+        //printf("%s", str.c_str());
+
         whff.Upload( str, data, datalen, GetMimeFromExt( type ) );
+
+        if (copyLoc){       //empty quotes to not copy...
+            mkdir(copyLoc);
+
+            char str2[256];
+            snprintf(str2, 256, "%s%s", copyLoc, str.c_str());
+            printf("\n\nSAVING AS: '%s'\n\n", str2);
+
+            FILE* f = fopen(str2, "wb");
+
+            if (!f){ printf("WARNING: Copy could not be saved because the directory could not be found!\n\n"); }
+            else{ fwrite(data, datalen, 1, f); }
+
+            fclose(f);
+            system("pause");
+        }
+
         SetClipboard( whff.GetLastUpload() );
         sayString( Timestamp() + "." + type + " has been uploaded...", "Screenshot Taken" );
         PlaySound( MAKEINTRESOURCE( 3 ), GetModuleHandle( NULL ), SND_ASYNC | SND_RESOURCE );
@@ -588,12 +616,17 @@ namespace FrogLies {
         L.set( "SHORTCUT_QUIT", &ShortcutQuit );
         L.set( "SHORTCUT_STOP", &ShortcutStop );
         L.set( "true", 1 );
-        L.set( "false", 1 );
+        L.set( "false", 0 );
 
 
         L.run();
 
         bubble = L.get<int>( "bubble" );
+
+
+        copyLoc = L.get<char*>( "copyLoc" );
+
+        //printf("%s", copyLoc);
     }
 }
 
