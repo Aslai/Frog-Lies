@@ -209,7 +209,7 @@ namespace FrogLies{
                 WHFF whff("");
                 Bitmap mb = GetWindow(GetDesktopWindow());
                 void* data = mb.ReadPNG();
-                whff.Upload( Timestamp(), data, mb.PNGLen(), GetMimeFromExt("png"));
+                whff.Upload( Timestamp()".png", data, mb.PNGLen(), GetMimeFromExt("png"));
                 SetClipboard( whff.GetLastUpload() );
             }
 
@@ -217,7 +217,7 @@ namespace FrogLies{
                 WHFF whff("");
                 Bitmap mb = GetWindow(GetForegroundWindow());
                 void* data = mb.ReadPNG();
-                whff.Upload( Timestamp(), data, mb.PNGLen(), GetMimeFromExt("png"));
+                whff.Upload( Timestamp()".png", data, mb.PNGLen(), GetMimeFromExt("png"));
                 SetClipboard( whff.GetLastUpload() );
             }
 
