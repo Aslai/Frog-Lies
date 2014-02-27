@@ -18,6 +18,7 @@
 #include <process.h>
 #include <vector>
 #include <ctime>
+#include <cstring>
 
 #include "files.h"
 #include "whff.h"
@@ -227,14 +228,13 @@ namespace FrogLies{
             }
             if (ShortcutClip.IsHit()) {
                 WHFF whff("");
-                HANDLE clip;
-                clip = GetClipboardData(CF_TEXT);
-                std::string text = (char*)clip;
-                void* data;
-                data = (void*) text.c_str();
-                whff.Upload( Timestamp(), data, text.length(), GetMimeFromExt("txt"));
+                HANDLE hClipboardData = GetClipboardData(CF_TEXT);
+                char *pchData = (char*)GlobalLock(hClipboardData);
+                void* data = (void*)pchData;
+                whff.Upload( Timestamp(), data, strlen(pchData), GetMimeFromExt("txt"));
+                GlobalUnlock(hClipboardData);
+                CloseClipboard();
                 SetClipboard( whff.GetLastUpload() );
-
             }
             if (ShortcutQuit.IsHit()) {
                 PostMessage( hwnd, WM_CLOSE, 0, 0 );
