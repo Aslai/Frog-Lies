@@ -7,15 +7,16 @@
 #include <tchar.h>
 #include <string>
 #include <map>
-
-#define WIN32_LEAN_AND_MEAN
-
+#define _WIN32_WINNT 0x0601
 #include <windows.h>
+
+
 #include <Windowsx.h>
 #include <commctrl.h>
 #include <shellapi.h>
 #include <Shlwapi.h>
 #include <process.h>
+#include <Winuser.h>
 #include <vector>
 #include <ctime>
 #include <cstring>
@@ -163,8 +164,26 @@ namespace FrogLies{
                     coords.y = dragEnd.y - dragStart.y;
                 }
 
-                if (clickDrag == DRAGGING){
-                    drawlinedrect(dragStart.x, dragStart.y, dragEnd.x, dragEnd.y);
+                //if (clickDrag == DRAGGING){
+                    //drawlinedrect(dragStart.x, dragStart.y, dragEnd.x, dragEnd.y);
+                //}
+                int x, y, w, h;
+                x = dragStart.x < dragEnd.x ? dragStart.x : dragEnd.x;
+                y = dragStart.y < dragEnd.y ? dragStart.y : dragEnd.y;
+                w = dragStart.x - dragEnd.x;
+                h = dragStart.y - dragEnd.y;
+                if( w < 0 ) w = -w;
+                if( h < 0 ) h = -h;
+
+                if( clickDrag != DRAGGING ){
+                    SetLayeredWindowAttributes(hwnd, RGB(255,255,255), 1, LWA_ALPHA);
+                    SetWindowPos(hwnd, HWND_TOPMOST, dragEnd.x - 100, dragEnd.y - 100, 200, 200, 0);
+                }
+                else{
+                    SetWindowPos(hwnd, HWND_TOPMOST, x,y,w,h, 0);
+                    if( clickDrag != NOTNOW )
+                    SetLayeredWindowAttributes(hwnd, RGB(255,255,255), 100, LWA_ALPHA);
+
                 }
 
                 //printf("State: %i \t MPos: [%i, %i] \t Coord: [%i, %i]\n", clickDrag, dragEnd.x, dragEnd.y, coords.x, coords.y);
@@ -177,12 +196,15 @@ namespace FrogLies{
                     printf("DOWN!\n");
                 }
                 if (wp == WM_LBUTTONUP){
+                    SetLayeredWindowAttributes(hwnd, RGB(255,255,255), 0, LWA_ALPHA);
                     WHFF whff("");
                     Bitmap mb = GetWindow(GetDesktopWindow());
                     mb.Crop( dragStart.x, dragStart.y, coords.x, coords.y );
                     void* data = mb.ReadPNG();
-                    whff.Upload( Timestamp()+".png", data, mb.PNGLen(), GetMimeFromExt("png"));
-                    SetClipboard( whff.GetLastUpload() );
+                    if( data != 0 ){
+                        whff.Upload( Timestamp()+".png", data, mb.PNGLen(), GetMimeFromExt("png"));
+                        SetClipboard( whff.GetLastUpload() );
+                    }
 
                     clickDrag = NOTNOW;
                     printf("UP!\n");
@@ -301,6 +323,7 @@ namespace FrogLies{
                 mouhook = SetWindowsHookEx(WH_MOUSE_LL, (HOOKPROC)handlemouse, GetModuleHandle(NULL), 0);
                 MyCursor = dragCursor;
                 SetCursor(dragCursor);
+                SetLayeredWindowAttributes(hwnd, RGB(255,255,255), 0, LWA_ALPHA);
             }
             if (ShortcutClip.IsHit()) {
                 WHFF whff("");
@@ -357,7 +380,9 @@ namespace FrogLies{
         L.set("SHORTCUT_CLIP", &ShortcutClip);
         L.set("SHORTCUT_QUIT", &ShortcutQuit);
 
+
         L.run();
+
     }
 }
 
@@ -384,19 +409,21 @@ int WINAPI WinMain(HINSTANCE thisinstance, HINSTANCE previnstance, LPSTR cmdline
 	windowclass.lpszMenuName = NULL;
 	windowclass.cbClsExtra = 0;
 	windowclass.cbWndExtra = 0;
-	windowclass.hbrBackground = (HBRUSH)COLOR_BACKGROUND;
+	windowclass.hbrBackground =  CreateSolidBrush( RGB( 0, 0, 255 ) );
+	//windowclass.style
 
 	if (!(RegisterClassEx(&windowclass))){ return 1; }
 
-	hwnd = CreateWindowEx(0, CLASSNAME, WINDOWTITLE, WS_OVERLAPPEDWINDOW,
-                          CW_USEDEFAULT, CW_USEDEFAULT, 640, 480, HWND_DESKTOP, NULL,
+	hwnd = CreateWindowEx(WS_EX_LAYERED, CLASSNAME, WINDOWTITLE, WS_POPUP,
+                          CW_USEDEFAULT, CW_USEDEFAULT, 20, 20, HWND_DESKTOP, NULL,
                           thisinstance, NULL);
 
 	if (!(hwnd)){ return 1; }
 
-    ShowWindow(hwnd, SW_HIDE);
+    ShowWindow(hwnd, SW_SHOW);
 	UpdateWindow(hwnd);
 	SetForegroundWindow(fgwindow); /* Give focus to the previous fg window */
+
 
     dragCursor = LoadCursor(NULL, IDC_CROSS);
     dfltCursor = GetCursor();
@@ -404,7 +431,7 @@ int WINAPI WinMain(HINSTANCE thisinstance, HINSTANCE previnstance, LPSTR cmdline
 
     modulehandle = GetModuleHandle(NULL);
 
-    #define BEGIN_IN_DRAGMODE
+    //#define BEGIN_IN_DRAGMODE
     #ifdef BEGIN_IN_DRAGMODE
 	mouhook = SetWindowsHookEx(WH_MOUSE_LL, (HOOKPROC)handlemouse, modulehandle, 0);
 	MyCursor = dragCursor;
