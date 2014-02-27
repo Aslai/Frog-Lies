@@ -1,13 +1,13 @@
 #ifndef __FROGLIES_SHORTCUT_H__
 #define __FROGLIES_SHORTCUT_H__
-namespace FrogLies{
+namespace FrogLies {
     class Shortcut;
 }
 #include<vector>
 #include<string>
 
-namespace FrogLies{
-    class Shortcut{
+namespace FrogLies {
+    class Shortcut {
         std::vector<std::string> keys;
         static std::vector<Shortcut*> Shortcuts;
     public:

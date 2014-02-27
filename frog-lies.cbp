@@ -44,25 +44,27 @@
 			<Add option="-DCURL_STATICLIB" />
 		</Compiler>
 		<Linker>
-			<Add library="curldll" />
-			<Add library="idn.dll" />
-			<Add library="rtmp" />
-			<Add library="ssh2dll" />
-			<Add library="ssl.dll" />
 			<Add library="winmm" />
 			<Add library="gdi32" />
 			<Add library="png" />
-			<Add library="z" />
 			<Add library="lua52" />
+			<Add library="user32" />
+			<Add library="z" />
+			<Add library="ws2_32" />
 		</Linker>
 		<Unit filename="bitmap.cpp" />
 		<Unit filename="bitmap.h" />
 		<Unit filename="files.cpp" />
 		<Unit filename="files.h" />
 		<Unit filename="froglies.h" />
+		<Unit filename="http.cpp" />
+		<Unit filename="http.h" />
 		<Unit filename="luawrap.cpp" />
 		<Unit filename="luawrap.h" />
 		<Unit filename="main.cpp" />
+		<Unit filename="resource.rc">
+			<Option compilerVar="WINDRES" />
+		</Unit>
 		<Unit filename="shortcut.cpp" />
 		<Unit filename="shortcut.h" />
 		<Unit filename="whff.cpp" />

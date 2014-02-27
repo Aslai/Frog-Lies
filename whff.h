@@ -1,13 +1,13 @@
 #ifndef __FROGLIES_WHFF_H__
 #define __FROGLIES_WHFF_H__
 
-namespace FrogLies{
+namespace FrogLies {
     class WHFF {
         static int HasInit;
         std::string Owner;
         std::string LastUpload;
         int laststatus;
-        static size_t callback( char *ptr, size_t size, size_t nmemb, void *userdata);
+        static size_t callback( char *ptr, size_t size, size_t nmemb, void *userdata );
     public:
         WHFF();
         WHFF( std::string owner );

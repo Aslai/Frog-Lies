@@ -25,67 +25,67 @@
 #include "whff.h"
 #include "bitmap.h"
 
-namespace FrogLies{
+namespace FrogLies {
     void* FillTemplate( unsigned int& bpos, const char** Template, ... ) {
         va_list args;
         va_start( args, Template );
         unsigned int bsize = 1000;
-        char* buffer = (char*) malloc( bsize );
+        char* buffer = ( char* ) malloc( bsize );
         bpos = 0;
 
         for( int i = 0; Template[i] != 0; i += 2 ) {
-            switch( Template[i][0] ) {
-            case 'R':
-            case 'r': {
-                unsigned int rawlen = strlen( Template[i+1] );
-                while( bpos + rawlen >= bsize ) {
-                    bsize *= 2;
-                    buffer = (char*) realloc( buffer, bsize );
-                }
-                bpos += sprintf( buffer + bpos, "%s", Template[i+1] );
+                switch( Template[i][0] ) {
+                        case 'R':
+                        case 'r': {
+                                unsigned int rawlen = strlen( Template[i + 1] );
+                                while( bpos + rawlen >= bsize ) {
+                                        bsize *= 2;
+                                        buffer = ( char* ) realloc( buffer, bsize );
+                                    }
+                                bpos += sprintf( buffer + bpos, "%s", Template[i + 1] );
+                            }
+                            break;
+                        case 'S':
+                        case 's': {
+                                char* arg = va_arg( args, char* );
+                                unsigned int rawlen = strlen( arg );
+                                while( bpos + rawlen >= bsize ) {
+                                        bsize *= 2;
+                                        buffer = ( char* ) realloc( buffer, bsize );
+                                    }
+                                bpos += sprintf( buffer + bpos, "%s", arg );
+                            }
+                            break;
+                        case 'D':
+                        case 'd': {
+                                void* arg = va_arg( args, void* );
+                                unsigned int rawlen = va_arg( args, unsigned int );
+                                while( bpos + rawlen >= bsize ) {
+                                        bsize *= 2;
+                                        buffer = ( char* ) realloc( buffer, bsize );
+                                    }
+                                memcpy( buffer + bpos, arg, rawlen );
+                                bpos += rawlen;
+                            }
+                            break;
+                    }
             }
-            break;
-            case 'S':
-            case 's': {
-                char* arg = va_arg( args, char* );
-                unsigned int rawlen = strlen( arg );
-                while( bpos + rawlen >= bsize ) {
-                    bsize *= 2;
-                    buffer = (char*) realloc( buffer, bsize );
-                }
-                bpos += sprintf( buffer + bpos, "%s", arg );
-            }
-            break;
-            case 'D':
-            case 'd': {
-                void* arg = va_arg( args, void* );
-                unsigned int rawlen = va_arg( args, unsigned int );
-                while( bpos + rawlen >= bsize ) {
-                    bsize *= 2;
-                    buffer = (char*) realloc( buffer, bsize );
-                }
-                memcpy( buffer + bpos, arg, rawlen );
-                bpos += rawlen;
-            }
-            break;
-            }
-        }
         return buffer;
     }
 
     int WHFF::HasInit = 0;
 
-    WHFF::WHFF(){
-        WHFF("");
+    WHFF::WHFF() {
+        WHFF( "" );
     }
 
     WHFF::WHFF( std::string owner ) {
         if( !HasInit ) {
-            HasInit = 1;
-            #ifdef USE_CURL
-            curl_global_init(CURL_GLOBAL_WIN32);
-            #endif
-        }
+                HasInit = 1;
+#ifdef USE_CURL
+                curl_global_init( CURL_GLOBAL_WIN32 );
+#endif
+            }
         SetOwner( owner );
         laststatus = 0;
     }
@@ -95,14 +95,15 @@ namespace FrogLies{
     }
 
     size_t WHFF::callback( char *ptr, size_t size, size_t nmemb, void *userdata ) {
-        printf("HAH %d|%s|", size * nmemb, ptr);
-        char* tmp = (char*) malloc( size*nmemb + 1 );
-        memcpy( tmp, ptr, size*nmemb );
-        tmp[size*nmemb] = 0;
+        printf( "HAH %d|%s|", size * nmemb, ptr );
+        char* tmp = ( char* ) malloc( size * nmemb + 1 );
+        memcpy( tmp, ptr, size * nmemb );
+        tmp[size * nmemb] = 0;
         std::string value = tmp;
-        if( value.substr(0, 5) != "Error" )
-            value = "http://fiel.tk/?i=" + value;
-        WHFF* self = (WHFF*) userdata;
+        if( value.substr( 0, 5 ) != "Error" ) {
+                value = "http://fiel.tk/?i=" + value;
+            }
+        WHFF* self = ( WHFF* ) userdata;
         self->LastUpload = value;
         return size * nmemb;
     }
@@ -113,9 +114,10 @@ namespace FrogLies{
 
     int WHFF::Upload( std::string name, const void* data, size_t datalen, std::string mimetype, std::string password ) {
         for( unsigned int i = 0; i < name.length(); ++i ) {
-            if( name[i] == '\"' || name[i] < ' ' )
-                name[i] = ' ';
-        }
+                if( name[i] == '\"' || name[i] < ' ' ) {
+                        name[i] = ' ';
+                    }
+            }
 
         const char * posttemplate[] = {
             "raw",  "-----------------------------28251299466151\r\n",
@@ -143,38 +145,38 @@ namespace FrogLies{
                                            password.c_str(), password.length(),
                                            Owner.c_str(), Owner.length() );
 
-        printf("%s\n", (char*) postobject );
+        printf( "%s\n", ( char* ) postobject );
 
-        #ifdef USE_CURL
+#ifdef USE_CURL
         CURL *curl = curl_easy_init();
-        curl_easy_setopt(curl, CURLOPT_VERBOSE, 1);
+        curl_easy_setopt( curl, CURLOPT_VERBOSE, 1 );
         const char *theUrl = "http://frogbox.es/whff/upload.php?raw";
-        curl_easy_setopt(curl, CURLOPT_URL, theUrl );
-        curl_easy_setopt(curl, CURLOPT_POSTFIELDS, postobject);
-        curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, length);
-        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WHFF::callback );
-        curl_easy_setopt(curl, CURLOPT_WRITEDATA, this );
+        curl_easy_setopt( curl, CURLOPT_URL, theUrl );
+        curl_easy_setopt( curl, CURLOPT_POSTFIELDS, postobject );
+        curl_easy_setopt( curl, CURLOPT_POSTFIELDSIZE, length );
+        curl_easy_setopt( curl, CURLOPT_WRITEFUNCTION, WHFF::callback );
+        curl_easy_setopt( curl, CURLOPT_WRITEDATA, this );
 
 
 
         struct curl_slist *headers = NULL;
-        headers = curl_slist_append(headers, "Content-Type: multipart/form-data; boundary=---------------------------28251299466151" );
-        curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
+        headers = curl_slist_append( headers, "Content-Type: multipart/form-data; boundary=---------------------------28251299466151" );
+        curl_easy_setopt( curl, CURLOPT_HTTPHEADER, headers );
 
 
-        curl_easy_perform(curl);
-        curl_slist_free_all(headers);
-        curl_easy_cleanup(curl);
-        #else
-        HTTP http("http://frogbox.es/whff/upload.php?raw");
+        curl_easy_perform( curl );
+        curl_slist_free_all( headers );
+        curl_easy_cleanup( curl );
+#else
+        HTTP http( "http://frogbox.es/whff/upload.php?raw" );
         http.SetHeader( "Content-Type: multipart/form-data; boundary=---------------------------28251299466151" );
 
-        http.Post( postobject, length );
+        laststatus = http.Post( postobject, length );
         size_t length2;
-        char* c = (char*)http.GetData(length2);
+        char* c = ( char* )http.GetData( length2 );
 
         callback( c, length2, 1, this );
-        #endif
+#endif
 
         free( postobject );
         return 1;
@@ -188,7 +190,7 @@ namespace FrogLies{
         return 1;
     }
 
-    int WHFF::GetStatus(){
+    int WHFF::GetStatus() {
         return laststatus;
     }
 }

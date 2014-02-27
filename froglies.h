@@ -3,7 +3,7 @@
 #include<string>
 #include "shortcut.h"
 
-namespace FrogLies{
+namespace FrogLies {
     int ReadKey( std::string key );
     void SetClipboard( std::string text );
 }

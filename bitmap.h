@@ -3,7 +3,7 @@
 
 #include "png.h"
 
-namespace FrogLies{
+namespace FrogLies {
     class Bitmap {
         unsigned int Width, Height;
         unsigned char* Data;
@@ -13,8 +13,8 @@ namespace FrogLies{
         int* references;
 
         static Bitmap *self;
-        static void pngwrite(png_structp png_ptr,png_bytep data, png_uint_32 length);
-        static void pngflush(png_structp png_ptr);
+        static void pngwrite( png_structp png_ptr, png_bytep data, png_uint_32 length );
+        static void pngflush( png_structp png_ptr );
 
     public:
         Bitmap();
@@ -31,7 +31,7 @@ namespace FrogLies{
         size_t PNGLen();
         void* ReadPNG();
     };
-    Bitmap GetWindow(HWND h);
+    Bitmap GetWindow( HWND h );
 }
 
 #endif
