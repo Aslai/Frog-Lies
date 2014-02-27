@@ -51,10 +51,13 @@ namespace FrogLies{
     POINT coords;
     HCURSOR dragCursor;
     HCURSOR dfltCursor;
+    HCURSOR MyCursor;
+
 
     void CheckKeys();
 
     std::map<std::string,int> keyspressed;
+    std::string Timestamp();
     int ReadKey( std::string key ){
         if( keyspressed[key] == 2 ){
             keyspressed[key] = 1;
@@ -146,6 +149,7 @@ namespace FrogLies{
     }
 
     LRESULT CALLBACK handlemouse(int code, WPARAM wp, LPARAM lp){
+
         if (clickDrag){
             if ((wp == WM_LBUTTONDOWN || wp == WM_LBUTTONUP || wp == WM_MOUSEMOVE)){
                 MSLLHOOKSTRUCT st_hook = *((MSLLHOOKSTRUCT*)lp);
@@ -173,6 +177,7 @@ namespace FrogLies{
                     printf("DOWN!\n");
                 }
                 if (wp == WM_LBUTTONUP){
+<<<<<<< HEAD
                     //takeScreenShotAndClipTo(dragStart, dragEnd);
                     if (!(dragStart.x == dragEnd.x || dragStart.y == dragEnd.y)){
                         WHFF whff("");
@@ -193,17 +198,35 @@ namespace FrogLies{
                         SetClipboard( whff.GetLastUpload() );
                     }
 
+=======
+                    WHFF whff("");
+                    Bitmap mb = GetWindow(GetDesktopWindow());
+                    mb.Crop( dragStart.x, dragStart.y, coords.x, coords.y );
+                    void* data = mb.ReadPNG();
+                    whff.Upload( Timestamp()+".png", data, mb.PNGLen(), GetMimeFromExt("png"));
+                    SetClipboard( whff.GetLastUpload() );
+
+>>>>>>> 98f2a4a91ad174aee2a471a17b455fc1c5a29d2c
                     clickDrag = NOTNOW;
                     printf("UP!\n");
                     UnhookWindowsHookEx(mouhook);
                     mouhook = NULL;
+                    MyCursor = dfltCursor;
                     SetCursor(dfltCursor);
                 }
             }
         }
         else{
+            UnhookWindowsHookEx(mouhook);
+            mouhook = NULL;
+            MyCursor = dfltCursor;
+            SetCursor(dfltCursor);
             return CallNextHookEx(mouhook, code, wp, lp);
         }
+        if( (wp == WM_LBUTTONDOWN || wp == WM_LBUTTONUP ) )
+            return -1;
+        else
+            return CallNextHookEx(mouhook, code, wp, lp);
     }
 
     LRESULT CALLBACK handlekeys(int code, WPARAM wp, LPARAM lp){
@@ -269,6 +292,9 @@ namespace FrogLies{
             case WM_CLOSE: case WM_DESTROY:
                 running = false;
                 break;
+            case WM_SETCURSOR:
+                SetCursor(MyCursor);
+                break;
             default:
                 return DefWindowProc(hwnd, msg, wparam, lparam);
         };
@@ -280,7 +306,11 @@ namespace FrogLies{
                 WHFF whff("");
                 Bitmap mb = GetWindow(GetDesktopWindow());
                 void* data = mb.ReadPNG();
+<<<<<<< HEAD
                 whff.Upload( Timestamp() + ".png", data, mb.PNGLen(), GetMimeFromExt("png"));
+=======
+                whff.Upload( Timestamp()+".png", data, mb.PNGLen(), GetMimeFromExt("png"));
+>>>>>>> 98f2a4a91ad174aee2a471a17b455fc1c5a29d2c
                 SetClipboard( whff.GetLastUpload() );
             }
 
@@ -288,7 +318,11 @@ namespace FrogLies{
                 WHFF whff("");
                 Bitmap mb = GetWindow(GetForegroundWindow());
                 void* data = mb.ReadPNG();
+<<<<<<< HEAD
                 whff.Upload( Timestamp() + ".png", data, mb.PNGLen(), GetMimeFromExt("png"));
+=======
+                whff.Upload( Timestamp()+".png", data, mb.PNGLen(), GetMimeFromExt("png"));
+>>>>>>> 98f2a4a91ad174aee2a471a17b455fc1c5a29d2c
                 SetClipboard( whff.GetLastUpload() );
             }
 
@@ -296,6 +330,7 @@ namespace FrogLies{
                 printf("hi\n");
                 clickDrag = WAITING;
                 mouhook = SetWindowsHookEx(WH_MOUSE_LL, (HOOKPROC)handlemouse, GetModuleHandle(NULL), 0);
+                MyCursor = dragCursor;
                 SetCursor(dragCursor);
             }
             if (ShortcutClip.IsHit()) {
@@ -376,7 +411,7 @@ int WINAPI WinMain(HINSTANCE thisinstance, HINSTANCE previnstance, LPSTR cmdline
 	windowclass.cbSize = sizeof(WNDCLASSEX);
 	windowclass.hIcon = LoadIcon(NULL, IDI_APPLICATION);
 	windowclass.hIconSm = LoadIcon(NULL, IDI_APPLICATION);
-	windowclass.hCursor  = LoadCursor(NULL, IDC_ARROW);
+	windowclass.hCursor  = NULL;
 	windowclass.lpszMenuName = NULL;
 	windowclass.cbClsExtra = 0;
 	windowclass.cbWndExtra = 0;
@@ -394,14 +429,16 @@ int WINAPI WinMain(HINSTANCE thisinstance, HINSTANCE previnstance, LPSTR cmdline
 	UpdateWindow(hwnd);
 	SetForegroundWindow(fgwindow); /* Give focus to the previous fg window */
 
-    dragCursor = LoadCursor(thisinstance, IDC_CROSS);
+    dragCursor = LoadCursor(NULL, IDC_CROSS);
     dfltCursor = GetCursor();
+    MyCursor = dfltCursor;
 
     modulehandle = GetModuleHandle(NULL);
 
     #define BEGIN_IN_DRAGMODE
     #ifdef BEGIN_IN_DRAGMODE
 	mouhook = SetWindowsHookEx(WH_MOUSE_LL, (HOOKPROC)handlemouse, modulehandle, 0);
+	MyCursor = dragCursor;
     SetCursor(dragCursor);
     clickDrag = WAITING;
     #endif
