@@ -85,6 +85,69 @@ namespace FrogLies{
         }
     }
 
+    void drawtext( int x, int y, char* str ){
+        HDC screenDC = ::GetDC(0);
+        COLORREF cBack, cTxt;
+        cBack = RGB(255, 255, 255);
+        cTxt = RGB(10, 10, 10);
+
+        SetBkColor(screenDC, cBack);
+        SetTextColor(screenDC, cTxt);
+        //SetBkMode(screenDC, TRANSPARENT);
+
+        TextOut( screenDC, x, y, str, strlen( str ) );
+        //::Rectangle(screenDC, 200, 200, 300, 300);
+        ::ReleaseDC(0, screenDC);
+    }
+
+    void drawrect( int x, int y, int w, int h ){
+        HDC screenDC = ::GetDC(0);
+        COLORREF cBack, cTxt;
+        cBack = RGB(0, 0, 0);
+        cTxt = RGB(150,150, 100);
+
+        SetBkColor(screenDC, cTxt);
+        Rectangle( screenDC, x, y, w, h );
+
+        //::Rectangle(screenDC, 200, 200, 300, 300);
+        ReleaseDC(0, screenDC);
+    }
+
+    void drawlinedrect( int x1, int y1, int x2, int y2 ){
+        HDC screenDC = GetDC(0);
+        COLORREF cBack, cTxt;
+        cBack = RGB(0, 0, 0);
+        cTxt = RGB(150,150, 100);
+
+        SetBkColor(screenDC, cTxt);
+
+        MoveToEx(screenDC, x1, y1, NULL);
+        LineTo(screenDC, x1, y2);
+        LineTo(screenDC, x2, y2);
+        LineTo(screenDC, x2, y1);
+        LineTo(screenDC, x1, y1);
+
+        //::Rectangle(screenDC, 200, 200, 300, 300);
+        ReleaseDC(0, screenDC);
+    }
+
+    std::string Timestamp() {
+        time_t rawtime;
+        struct tm * timeinfo;
+        time ( &rawtime );
+        timeinfo = localtime ( &rawtime );
+        char str[64];
+        snprintf(str, 64, "ss at %s", asctime(timeinfo));
+        int i = 0;
+        while (str[i]){
+            i++;
+            if (str[i] == ' '){
+                str[i] = '_'; }
+        }
+        std::string ToReturn(str);
+        return ToReturn;
+    }
+
     LRESULT CALLBACK handlemouse(int code, WPARAM wp, LPARAM lp){
 
         if (clickDrag){
@@ -98,6 +161,10 @@ namespace FrogLies{
                 else{
                     coords.x = dragEnd.x - dragStart.x;
                     coords.y = dragEnd.y - dragStart.y;
+                }
+
+                if (clickDrag == DRAGGING){
+                    drawlinedrect(dragStart.x, dragStart.y, dragEnd.x, dragEnd.y);
                 }
 
                 //printf("State: %i \t MPos: [%i, %i] \t Coord: [%i, %i]\n", clickDrag, dragEnd.x, dragEnd.y, coords.x, coords.y);
@@ -114,7 +181,7 @@ namespace FrogLies{
                     Bitmap mb = GetWindow(GetDesktopWindow());
                     mb.Crop( dragStart.x, dragStart.y, coords.x, coords.y );
                     void* data = mb.ReadPNG();
-                    whff.Upload( Timestamp(), data, mb.PNGLen(), GetMimeFromExt("png"));
+                    whff.Upload( Timestamp()+".png", data, mb.PNGLen(), GetMimeFromExt("png"));
                     SetClipboard( whff.GetLastUpload() );
 
                     clickDrag = NOTNOW;
@@ -211,29 +278,12 @@ namespace FrogLies{
         return 0;
     }
 
-    std::string Timestamp() {
-        time_t rawtime;
-        struct tm * timeinfo;
-        time ( &rawtime );
-        timeinfo = localtime ( &rawtime );
-        char str[64];
-        snprintf(str, 64, "ss at %s", asctime(timeinfo));
-        int i = 0;
-        while (str[i]){
-            i++;
-            if (str[i] == ' '){
-                str[i] = '_'; }
-        }
-        std::string ToReturn(str);
-        return ToReturn;
-    }
-
     void CheckKeys(){
             if( ShortcutDesk.IsHit() ){
                 WHFF whff("");
                 Bitmap mb = GetWindow(GetDesktopWindow());
                 void* data = mb.ReadPNG();
-                whff.Upload( Timestamp(), data, mb.PNGLen(), GetMimeFromExt("png"));
+                whff.Upload( Timestamp()+".png", data, mb.PNGLen(), GetMimeFromExt("png"));
                 SetClipboard( whff.GetLastUpload() );
             }
 
@@ -241,7 +291,7 @@ namespace FrogLies{
                 WHFF whff("");
                 Bitmap mb = GetWindow(GetForegroundWindow());
                 void* data = mb.ReadPNG();
-                whff.Upload( Timestamp(), data, mb.PNGLen(), GetMimeFromExt("png"));
+                whff.Upload( Timestamp()+".png", data, mb.PNGLen(), GetMimeFromExt("png"));
                 SetClipboard( whff.GetLastUpload() );
             }
 
@@ -354,7 +404,7 @@ int WINAPI WinMain(HINSTANCE thisinstance, HINSTANCE previnstance, LPSTR cmdline
 
     modulehandle = GetModuleHandle(NULL);
 
-    //#define BEGIN_IN_DRAGMODE
+    #define BEGIN_IN_DRAGMODE
     #ifdef BEGIN_IN_DRAGMODE
 	mouhook = SetWindowsHookEx(WH_MOUSE_LL, (HOOKPROC)handlemouse, modulehandle, 0);
 	MyCursor = dragCursor;
