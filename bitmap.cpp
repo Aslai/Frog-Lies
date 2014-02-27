@@ -135,6 +135,9 @@ namespace FrogLies{
     }
 
     void* Bitmap::ReadPNG() {
+        if( Width == 0 || Height == 0 )
+            return NULL;
+
         self = this;
         if( pngdata )
             free( pngdata );

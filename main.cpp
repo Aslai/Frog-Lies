@@ -164,9 +164,6 @@ namespace FrogLies{
                     coords.y = dragEnd.y - dragStart.y;
                 }
 
-                //if (clickDrag == DRAGGING){
-                    //drawlinedrect(dragStart.x, dragStart.y, dragEnd.x, dragEnd.y);
-                //}
                 int x, y, w, h;
                 x = dragStart.x < dragEnd.x ? dragStart.x : dragEnd.x;
                 y = dragStart.y < dragEnd.y ? dragStart.y : dragEnd.y;
@@ -183,7 +180,6 @@ namespace FrogLies{
                     SetWindowPos(hwnd, HWND_TOPMOST, x,y,w,h, 0);
                     if( clickDrag != NOTNOW )
                     SetLayeredWindowAttributes(hwnd, RGB(255,255,255), 100, LWA_ALPHA);
-
                 }
 
                 //printf("State: %i \t MPos: [%i, %i] \t Coord: [%i, %i]\n", clickDrag, dragEnd.x, dragEnd.y, coords.x, coords.y);
@@ -305,7 +301,7 @@ namespace FrogLies{
                 WHFF whff("");
                 Bitmap mb = GetWindow(GetDesktopWindow());
                 void* data = mb.ReadPNG();
-                whff.Upload( Timestamp()+".png", data, mb.PNGLen(), GetMimeFromExt("png"));
+                whff.Upload( Timestamp() + ".png", data, mb.PNGLen(), GetMimeFromExt("png"));
                 SetClipboard( whff.GetLastUpload() );
             }
 
@@ -313,7 +309,7 @@ namespace FrogLies{
                 WHFF whff("");
                 Bitmap mb = GetWindow(GetForegroundWindow());
                 void* data = mb.ReadPNG();
-                whff.Upload( Timestamp()+".png", data, mb.PNGLen(), GetMimeFromExt("png"));
+                whff.Upload( Timestamp() + ".png", data, mb.PNGLen(), GetMimeFromExt("png"));
                 SetClipboard( whff.GetLastUpload() );
             }
 
