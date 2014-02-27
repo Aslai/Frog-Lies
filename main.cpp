@@ -474,11 +474,11 @@ namespace FrogLies {
                     PostMessage( hwnd, WM_CLOSE, 0, 0 );
                 }
             }
-            Sleep( 1000 );
+            Sleep( 100 );
             nid.uFlags = NIF_MESSAGE | NIF_ICON | NIF_TIP;
             nid.hIcon = IconA;
             Shell_NotifyIcon( NIM_MODIFY, &nid );
-            Sleep( 1000 );
+            Sleep( 100 );
             nid.uFlags = NIF_MESSAGE | NIF_ICON | NIF_TIP;
             nid.hIcon = IconB;
             Shell_NotifyIcon( NIM_MODIFY, &nid );
@@ -576,7 +576,7 @@ int WINAPI WinMain( HINSTANCE thisinstance, HINSTANCE previnstance, LPSTR cmdlin
 
     modulehandle = GetModuleHandle( NULL );
 
-    #define BEGIN_IN_DRAGMODE
+    /*#define BEGIN_IN_DRAGMODE
 #ifdef BEGIN_IN_DRAGMODE
     mouhook = SetWindowsHookEx( WH_MOUSE_LL, ( HOOKPROC )handlemouse, modulehandle, 0 );
     MyCursor = dragCursor;
@@ -584,7 +584,7 @@ int WINAPI WinMain( HINSTANCE thisinstance, HINSTANCE previnstance, LPSTR cmdlin
     clickDrag = WAITING;
     SetLayeredWindowAttributes( hwnd, RGB( 255, 255, 255 ), 0, LWA_ALPHA );
     ShowWindow( hwnd, SW_SHOW );
-#endif
+#endif*/
 
     IconA = LoadIcon( thisinstance, MAKEINTRESOURCE( 1 ) );
     IconB = LoadIcon( thisinstance, MAKEINTRESOURCE( 2 ) );
