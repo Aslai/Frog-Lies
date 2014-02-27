@@ -265,7 +265,6 @@ int HTTP::processHeaders( char* buffer, size_t len ) {
 }
 
 int HTTP::Post( void* data, size_t datalen ) {
-    return -1;
     SOCKET sock = connectTCP( ip, port );
     if( sock <= 0 ) {
         return -1;

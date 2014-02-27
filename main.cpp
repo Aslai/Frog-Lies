@@ -122,7 +122,7 @@ namespace FrogLies {
 
                 case UPLOAD_CROP: {
                         Bitmap mb = GetWindow( GetDesktopWindow() );
-                        mb.Crop( dragStart.x, dragStart.y, coords.x, coords.y );
+                        mb.Crop( a.d.x, a.d.y, a.d.w, a.d.h );
                         void* data = mb.ReadPNG();
                         if( data != 0 ) {
                             Upload( "png", data, mb.PNGLen() );
@@ -153,6 +153,17 @@ namespace FrogLies {
 
     void DoUpload( int type, int x = -1, int y = -1, int w = -1, int h = -1 ) {
         _anupload a;
+        if( w < 0 ) {
+            x += w;
+            w = -w;
+        }
+        if( h < 0 ) {
+            y += h;
+            h = -h;
+        }
+
+        printf( "%d\t%d\t%d\t%d\t\n\n\n", x, y, w, h );
+
         a.t = type;
         a.d.x = x;
         a.d.y = y;
@@ -245,7 +256,7 @@ namespace FrogLies {
                     }
                 }
 
-                //printf("State: %i \t MPos: [%i, %i] \t Coord: [%i, %i]\n", clickDrag, dragEnd.x, dragEnd.y, coords.x, coords.y);
+                //printf("State: %i \t MPos: [%i, %i] \t Coord: [%i, %i]\n", clickDrag, dragEnd.x - GetSystemMetrics( SM_XVIRTUALSCREEN ), dragEnd.y - GetSystemMetrics( SM_YVIRTUALSCREEN ), coords.x, coords.y);
 
                 //printf("HANDMOUS- wp: 0x%X \t md: 0x%X \t fl: 0x%X\n", wp, st_hook.mouseData, st_hook.flags);
 
@@ -256,7 +267,8 @@ namespace FrogLies {
                 }
                 if ( wp == WM_LBUTTONUP ) {
                     SetLayeredWindowAttributes( hwnd, RGB( 255, 255, 255 ), 0, LWA_ALPHA );
-                    DoUpload( UPLOAD_CROP, dragStart.x, dragStart.y, coords.x, coords.y );
+                    printf( "\n\n\n\n\n%d\n\n\n\n\n\n", GetSystemMetrics( SM_XVIRTUALSCREEN ) );
+                    DoUpload( UPLOAD_CROP, dragStart.x - GetSystemMetrics( SM_XVIRTUALSCREEN ), dragStart.y - GetSystemMetrics( SM_YVIRTUALSCREEN ), coords.x, coords.y );
                     /*
                     Bitmap mb = GetWindow( GetDesktopWindow() );
                     mb.Crop( dragStart.x, dragStart.y, coords.x, coords.y );
