@@ -187,7 +187,12 @@ namespace FrogLies {
                                 } break;
                             case CF_HDROP: {
                                     int num = DragQueryFile( ( HDROP ) pchData, 0xFFFFFFFF, NULL, 0 );
-                                    if( num > 1 ) {
+                                    char names[2000];
+                                    DragQueryFile( ( HDROP ) pchData, 0, names, 2000 );
+                                    FILE* f = fopen(names, "r");
+                                    if( f )
+                                        fclose( f );
+                                    if( num > 1 || f == 0 ) {
 
                                         std::string fname = Timestamp( "files" );
                                         std::string cmdline="";
