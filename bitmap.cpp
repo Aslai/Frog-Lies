@@ -225,7 +225,33 @@ namespace FrogLies {
     }
 
     Bitmap *Bitmap::self;
+    Bitmap GetBitmapFromHbitmap( HBITMAP hh ) {
+        Bitmap ret;
+        HWND h = GetDesktopWindow();
 
+        HDC hDC = GetDC( h );
+        HDC hCaptureDC = CreateCompatibleDC( hDC );
+
+        BITMAPINFOHEADER bmi = {0};
+        bmi.biSize = sizeof( BITMAPINFOHEADER );
+
+        GetDIBits( hCaptureDC, hh, 0, 0, NULL, ( BITMAPINFO* )&bmi, DIB_RGB_COLORS );
+
+        BYTE* ScreenData = ( BYTE* )malloc( 4 * -bmi.biWidth * -bmi.biHeight );
+
+        GetDIBits( hCaptureDC, hh, 0, -bmi.biHeight, ScreenData, ( BITMAPINFO* )&bmi, DIB_RGB_COLORS );
+
+        ret.Write( bmi.biWidth, -bmi.biHeight, ScreenData );
+        free( ScreenData );
+
+
+        // SaveCapturedBitmap(hCaptureBitmap); //Place holder - Put your code
+        //here to save the captured image to disk
+        ReleaseDC( h, hDC );
+        DeleteDC( hCaptureDC );
+
+        return ret;
+    }
     Bitmap GetWindow( HWND h ) {
         RECT rect;
         RECT rect2;

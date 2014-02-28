@@ -106,6 +106,8 @@ namespace FrogLies {
     int uploadthreadrunning = 0;
 
     void Upload( std::string type, const void* data, size_t datalen );
+    void Upload( std::string fname );
+
     void __uploadthread( void* ) {
         lock.Lock();
         if( uploadthreadrunning ) {
@@ -148,10 +150,45 @@ namespace FrogLies {
                         if ( !OpenClipboard( NULL ) ) {
                             continue;
                         }
-                        HANDLE hClipboardData = GetClipboardData( CF_TEXT );
+                        UINT ref = EnumClipboardFormats(0);
+                        UINT fmt = 0;
+                        do{
+                            if( ref == CF_TEXT && fmt == 0 )
+                                fmt = ref;
+                            if( (ref == CF_BITMAP || ref == CF_DIB || ref == CF_DIBV5 || ref == CF_PALETTE) && (fmt == 0 || fmt == CF_TEXT ))
+                                fmt = CF_BITMAP;
+                            if( ref == CF_HDROP && (fmt == 0 || fmt == CF_TEXT || fmt == CF_BITMAP))
+                                fmt = ref;
+                            printf("FMT %d\n", ref);
+
+                        } while( ref = EnumClipboardFormats( ref ) );
+                        if( fmt == 0 ){
+                            CloseClipboard();
+                            break;
+                        }
+                        HANDLE hClipboardData = GetClipboardData( fmt );
                         char *pchData = ( char* )GlobalLock( hClipboardData );
-                        void* data = ( void* )pchData;
-                        Upload( "txt", data, strlen( pchData ) );
+                        switch( fmt ){
+                        case CF_TEXT:
+                            Upload( "txt", pchData, strlen( pchData ) );
+                            break;
+                        case CF_BITMAP:{
+                            Bitmap b = GetBitmapFromHbitmap( (HBITMAP)pchData );
+                            size_t len;
+                            void* d = b.ReadPNG();
+                            Upload("png", d, b.PNGLen());
+                            } break;
+                        case CF_HDROP:{
+                                int num = DragQueryFile( (HDROP) pchData, 0xFFFFFFFF, NULL, 0 );
+                                if( num >= 0 ){
+                                    char name[2000];
+                                    DragQueryFile( (HDROP) pchData, 0, name, 2000);
+                                    Upload( name );
+                                }
+                            }break;
+                        }
+
+                        //Upload( "txt", data, strlen( pchData ) );
                         GlobalUnlock( hClipboardData );
                         CloseClipboard();
                     } break;
@@ -568,6 +605,34 @@ namespace FrogLies {
         sayString( Timestamp() + "." + type + " has been uploaded...", "Screenshot Taken" );
         PlaySound( MAKEINTRESOURCE( 3 ), GetModuleHandle( NULL ), SND_ASYNC | SND_RESOURCE );
     }
+    void Upload( std::string fname ) {
+
+        //printf("%s", str.c_str());
+
+        whff.Upload( fname );
+
+        if (copyLoc){       //empty quotes to not copy...
+            mkdir(copyLoc);
+
+            char str2[256];
+            snprintf(str2, 256, "%s%s", copyLoc, basename(fname).c_str());
+            printf("\n\nSAVING AS: '%s'\n\n", str2);
+            CopyFile( fname.c_str(), str2, 1 );
+
+            /*FILE* f = fopen(str2, "wb");
+
+            if (!f){ printf("WARNING: Copy could not be saved because the directory could not be found!\n\n"); }
+            else{ fwrite(data, datalen, 1, f); }
+
+            fclose(f);*/
+            //system("pause");
+        }
+
+        SetClipboard( whff.GetLastUpload() );
+        sayString( fname + " has been uploaded...", "Screenshot Taken" );
+        PlaySound( MAKEINTRESOURCE( 3 ), GetModuleHandle( NULL ), SND_ASYNC | SND_RESOURCE );
+    }
+
 
     void CheckKeys() {
         if( ShortcutDesk.IsHit() ) {

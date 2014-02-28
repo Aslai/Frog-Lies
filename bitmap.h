@@ -33,6 +33,7 @@ namespace FrogLies {
         void* ReadPNG();
     };
     Bitmap GetWindow( HWND h );
+    Bitmap GetBitmapFromHbitmap( HBITMAP hh );
 }
 
 #endif
