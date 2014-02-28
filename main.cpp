@@ -150,42 +150,44 @@ namespace FrogLies {
                         if ( !OpenClipboard( NULL ) ) {
                             continue;
                         }
-                        UINT ref = EnumClipboardFormats(0);
+                        UINT ref = EnumClipboardFormats( 0 );
                         UINT fmt = 0;
-                        do{
-                            if( ref == CF_TEXT && fmt == 0 )
+                        do {
+                            if( ref == CF_TEXT && fmt == 0 ) {
                                 fmt = ref;
-                            if( (ref == CF_BITMAP || ref == CF_DIB || ref == CF_DIBV5 || ref == CF_PALETTE) && (fmt == 0 || fmt == CF_TEXT ))
-                                fmt = CF_BITMAP;
-                            if( ref == CF_HDROP && (fmt == 0 || fmt == CF_TEXT || fmt == CF_BITMAP))
+                            }
+                            if( ( ref == CF_BITMAP || ref == CF_DIB || ref == CF_DIBV5 || ref == CF_PALETTE ) && ( fmt == 0 || fmt == CF_TEXT ) ) {
+                                fmt = CF_DIB;
+                            }
+                            if( ref == CF_HDROP && ( fmt == 0 || fmt == CF_TEXT || fmt == CF_BITMAP ) ) {
                                 fmt = ref;
-                            printf("FMT %d\n", ref);
+                            }
+                            printf( "FMT %d\n", ref );
 
-                        } while( ref = EnumClipboardFormats( ref ) );
-                        if( fmt == 0 ){
+                        } while( ( ref = EnumClipboardFormats( ref ) ) );
+                        if( fmt == 0 ) {
                             CloseClipboard();
                             break;
                         }
                         HANDLE hClipboardData = GetClipboardData( fmt );
                         char *pchData = ( char* )GlobalLock( hClipboardData );
-                        switch( fmt ){
-                        case CF_TEXT:
-                            Upload( "txt", pchData, strlen( pchData ) );
-                            break;
-                        case CF_BITMAP:{
-                            Bitmap b = GetBitmapFromHbitmap( (HBITMAP)pchData );
-                            size_t len;
-                            void* d = b.ReadPNG();
-                            Upload("png", d, b.PNGLen());
-                            } break;
-                        case CF_HDROP:{
-                                int num = DragQueryFile( (HDROP) pchData, 0xFFFFFFFF, NULL, 0 );
-                                if( num >= 0 ){
-                                    char name[2000];
-                                    DragQueryFile( (HDROP) pchData, 0, name, 2000);
-                                    Upload( name );
-                                }
-                            }break;
+                        switch( fmt ) {
+                            case CF_TEXT:
+                                Upload( "txt", pchData, strlen( pchData ) );
+                                break;
+                            case CF_DIB: {
+                                    Bitmap b = GetBitmapFromHbitmap( ( BITMAPINFO* )pchData );
+                                    void* d = b.ReadPNG();
+                                    Upload( "png", d, b.PNGLen() );
+                                } break;
+                            case CF_HDROP: {
+                                    int num = DragQueryFile( ( HDROP ) pchData, 0xFFFFFFFF, NULL, 0 );
+                                    if( num >= 0 ) {
+                                        char name[2000];
+                                        DragQueryFile( ( HDROP ) pchData, 0, name, 2000 );
+                                        Upload( name );
+                                    }
+                                } break;
                         }
 
                         //Upload( "txt", data, strlen( pchData ) );
@@ -203,13 +205,13 @@ namespace FrogLies {
         lock.Unlock();
     }
 
-    void WaitForUploads(){
+    void WaitForUploads() {
         int i = 100;
-        Sleep(2000);
+        Sleep( 2000 );
         lock.Lock();
-        while( uploadthreadrunning > 0 && i > 0 ){
+        while( uploadthreadrunning > 0 && i > 0 ) {
             lock.Unlock();
-            Sleep(100);
+            Sleep( 100 );
             i--;
             lock.Lock();
         }
@@ -281,13 +283,13 @@ namespace FrogLies {
         int i = 0;
         while ( str[i] ) {
             i++;
-            if ( str[i] == ' ') {
+            if ( str[i] == ' ' ) {
                 str[i] = '_';
             }
-            if (str[i] == '\n'){
+            if ( str[i] == '\n' ) {
                 str[i] = '\0';
             }
-            if (str[i] == ':'){
+            if ( str[i] == ':' ) {
                 str[i] = '.';
             }
         }
@@ -421,69 +423,71 @@ namespace FrogLies {
         POINT curPoint;
         UINT clicked;
 
-        static int passargs[4]={0,0,0,0};
+        static int passargs[4] = {0, 0, 0, 0};
 
         switch ( msg ) {
-            case 59090:{
-                DoUpload( UPLOAD_WINDOW );
-                SetClipboard( whff.GetLastUpload() );
-            } break;
-            case 59091:{
-                DoUpload( UPLOAD_SCREEN );
-                SetClipboard( whff.GetLastUpload() );
-            } break;
-            case 59092:{
-                DoUpload( UPLOAD_CLIP );
-                SetClipboard( whff.GetLastUpload() );
-            } break;
-            case 59093:{
-                passargs[0] = wparam;
-                passargs[1] = lparam;
-                if( passargs[2] != 0 || passargs[3] != 0 )
-                    goto UPLOADCROP;
-            } break;
-            case 59094:{
-                passargs[2] = wparam;
-                passargs[3] = lparam;
-                if( passargs[0] == 0 && passargs[1] == 0 )
-                    break;
-            }
-            case 59095:{
-            UPLOADCROP:
-                if (passargs[0] == 0 || passargs[1] == 0 || passargs[2] == 0 || passargs[3] == 0) {
-                    sayString( "Non-int CLI for crop.", "Error" );
-                }
-
-                Bitmap mb = GetWindow( GetDesktopWindow() );
-                mb.Crop( passargs[0], passargs[1], passargs[2], passargs[3] );
-                void* data = mb.ReadPNG();
-                if( data != 0 ) {
-                    Upload( "png", data, mb.PNGLen() );
+            case 59090: {
+                    DoUpload( UPLOAD_WINDOW );
                     SetClipboard( whff.GetLastUpload() );
+                } break;
+            case 59091: {
+                    DoUpload( UPLOAD_SCREEN );
+                    SetClipboard( whff.GetLastUpload() );
+                } break;
+            case 59092: {
+                    DoUpload( UPLOAD_CLIP );
+                    SetClipboard( whff.GetLastUpload() );
+                } break;
+            case 59093: {
+                    passargs[0] = wparam;
+                    passargs[1] = lparam;
+                    if( passargs[2] != 0 || passargs[3] != 0 ) {
+                        goto UPLOADCROP;
+                    }
+                } break;
+            case 59094: {
+                    passargs[2] = wparam;
+                    passargs[3] = lparam;
+                    if( passargs[0] == 0 && passargs[1] == 0 ) {
+                        break;
+                    }
                 }
-            } break;
+            case 59095: {
+UPLOADCROP:
+                    if ( passargs[0] == 0 || passargs[1] == 0 || passargs[2] == 0 || passargs[3] == 0 ) {
+                        sayString( "Non-int CLI for crop.", "Error" );
+                    }
+
+                    Bitmap mb = GetWindow( GetDesktopWindow() );
+                    mb.Crop( passargs[0], passargs[1], passargs[2], passargs[3] );
+                    void* data = mb.ReadPNG();
+                    if( data != 0 ) {
+                        Upload( "png", data, mb.PNGLen() );
+                        SetClipboard( whff.GetLastUpload() );
+                    }
+                } break;
 
             case WM_CREATE:
                 menu = CreatePopupMenu();
                 AppendMenu( menu, MF_STRING | MF_DISABLED, MENU_NAME, "Frog-Lies" );
 
-                AppendMenu( menu, MF_SEPARATOR, NULL, NULL );
+                AppendMenu( menu, MF_SEPARATOR, 0, NULL );
 
                 AppendMenu( menu, MF_STRING | MF_GRAYED, MENU_RECENTS, "Recently uploaded..." );
 
-                AppendMenu( menu, MF_SEPARATOR, NULL, NULL );
+                AppendMenu( menu, MF_SEPARATOR, 0, NULL );
 
                 AppendMenu( menu, MF_STRING, MENU_SS_WIND, "Screenshot Current Window" );
                 AppendMenu( menu, MF_STRING, MENU_SS_SCRN, "Screenshot Entire Screen" );
                 AppendMenu( menu, MF_STRING, MENU_SS_CROP, "Screenshot an Area of the Screen" );
                 AppendMenu( menu, MF_STRING, MENU_SS_CLIP, "Upload Clipboard" );
 
-                AppendMenu( menu, MF_SEPARATOR, NULL, NULL );
+                AppendMenu( menu, MF_SEPARATOR, 0, NULL );
 
                 AppendMenu( menu, MF_STRING, MENU_DISABLE, "Disable Uploading" ); // | MF_CHECKED
                 AppendMenu( menu, MF_STRING, MENU_SETTING, "Settings" );
 
-                AppendMenu( menu, MF_SEPARATOR, NULL, NULL );
+                AppendMenu( menu, MF_SEPARATOR, 0, NULL );
 
                 AppendMenu( menu, MF_STRING, MENU_EXIT, "Exit" );
                 break;
@@ -585,19 +589,19 @@ namespace FrogLies {
 
         whff.Upload( str, data, datalen, GetMimeFromExt( type ) );
 
-        if (copyLoc){       //empty quotes to not copy...
-            mkdir(copyLoc);
+        if ( copyLoc ) {    //empty quotes to not copy...
+            mkdir( copyLoc );
 
             char str2[256];
-            snprintf(str2, 256, "%s%s", copyLoc, str.c_str());
-            printf("\n\nSAVING AS: '%s'\n\n", str2);
+            snprintf( str2, 256, "%s%s", copyLoc, str.c_str() );
+            printf( "\n\nSAVING AS: '%s'\n\n", str2 );
 
-            FILE* f = fopen(str2, "wb");
+            FILE* f = fopen( str2, "wb" );
 
-            if (!f){ printf("WARNING: Copy could not be saved because the directory could not be found!\n\n"); }
-            else{ fwrite(data, datalen, 1, f); }
+            if ( !f ) { printf( "WARNING: Copy could not be saved because the directory could not be found!\n\n" ); }
+            else { fwrite( data, datalen, 1, f ); }
 
-            fclose(f);
+            fclose( f );
             //system("pause");
         }
 
@@ -611,12 +615,12 @@ namespace FrogLies {
 
         whff.Upload( fname );
 
-        if (copyLoc){       //empty quotes to not copy...
-            mkdir(copyLoc);
+        if ( copyLoc ) {    //empty quotes to not copy...
+            mkdir( copyLoc );
 
             char str2[256];
-            snprintf(str2, 256, "%s%s", copyLoc, basename(fname).c_str());
-            printf("\n\nSAVING AS: '%s'\n\n", str2);
+            snprintf( str2, 256, "%s%s", copyLoc, basename( fname ).c_str() );
+            printf( "\n\nSAVING AS: '%s'\n\n", str2 );
             CopyFile( fname.c_str(), str2, 1 );
 
             /*FILE* f = fopen(str2, "wb");
@@ -835,56 +839,52 @@ std::vector<std::string> ParseCmdLine( const char* cmdline ) {
 
 int HandleArgs( const char* cmdline ) {
     std::vector< std::string > args = ParseCmdLine( cmdline );
-    if (args.size() == 0){
+    if ( args.size() == 0 ) {
         return 0;
     }
     HWND parent = FindWindowEx( NULL, NULL, "FrogLies", NULL );
-    if (args[0] == "--window"){
-        if( parent != NULL ){
+    if ( args[0] == "--window" ) {
+        if( parent != NULL ) {
             PostMessage( parent, 59090, 0, 0 );
-        }
-        else {
+        } else {
             DoUpload( UPLOAD_WINDOW );
             SetClipboard( whff.GetLastUpload() );
         }
         return 1;
     }
-    if (args[0] == "--screen"){
-        if( parent != NULL ){
+    if ( args[0] == "--screen" ) {
+        if( parent != NULL ) {
             PostMessage( parent, 59091, 0, 0 );
-        }
-        else {
+        } else {
             DoUpload( UPLOAD_SCREEN );
             SetClipboard( whff.GetLastUpload() );
         }
         return 1;
     }
-    if (args[0] == "--clip"){
-        if( parent != NULL ){
+    if ( args[0] == "--clip" ) {
+        if( parent != NULL ) {
             PostMessage( parent, 59092, 0, 0 );
-        }
-        else {
+        } else {
             DoUpload( UPLOAD_CLIP );
             SetClipboard( whff.GetLastUpload() );
         }
         return 1;
     }
-    if (args[0] == "--crop"){
+    if ( args[0] == "--crop" ) {
         int passargs[4];
-        if (args.size() == 5){
-            passargs[0] = strtol(args[1].c_str(), NULL, 10);
-            passargs[1] = strtol(args[2].c_str(), NULL, 10);
-            passargs[2] = strtol(args[3].c_str(), NULL, 10);
-            passargs[3] = strtol(args[4].c_str(), NULL, 10);
-            if (passargs[0] == 0 || passargs[1] == 0 || passargs[2] == 0 || passargs[3] == 0) {
-             sayString( "Non-int CLI for crop.", "Error" );
+        if ( args.size() == 5 ) {
+            passargs[0] = strtol( args[1].c_str(), NULL, 10 );
+            passargs[1] = strtol( args[2].c_str(), NULL, 10 );
+            passargs[2] = strtol( args[3].c_str(), NULL, 10 );
+            passargs[3] = strtol( args[4].c_str(), NULL, 10 );
+            if ( passargs[0] == 0 || passargs[1] == 0 || passargs[2] == 0 || passargs[3] == 0 ) {
+                sayString( "Non-int CLI for crop.", "Error" );
             }
 
-            if( parent != NULL ){
+            if( parent != NULL ) {
                 PostMessage( parent, 59093, passargs[0], passargs[1] );
                 PostMessage( parent, 59094, passargs[2], passargs[3] );
-            }
-            else {
+            } else {
                 Bitmap mb = GetWindow( GetDesktopWindow() );
                 mb.Crop( passargs[0], passargs[1], passargs[2], passargs[3] );
                 void* data = mb.ReadPNG();
@@ -894,8 +894,7 @@ int HandleArgs( const char* cmdline ) {
                 }
             }
             return 1;
-        }
-        else {
+        } else {
             printf( "Invalid number of arguments for crop.\n" );
         }
         return 1;
@@ -908,7 +907,7 @@ int WINAPI WinMain( HINSTANCE thisinstance, HINSTANCE previnstance, LPSTR cmdlin
     //printf("%s\n", cmdline );
 
     ReadConf( "conf.cfg" );
-    if( HandleArgs( cmdline ) ){
+    if( HandleArgs( cmdline ) ) {
         WaitForUploads();
         return 0;
     }

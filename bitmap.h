@@ -22,7 +22,7 @@ namespace FrogLies {
         Bitmap( const Bitmap& other );
         ~Bitmap();
 
-        void Write( int width, int height, void* data );
+        void Write( int width, int height, void* data, int pixlen = 4 );
         void* Read();
 
         int W();
@@ -33,7 +33,7 @@ namespace FrogLies {
         void* ReadPNG();
     };
     Bitmap GetWindow( HWND h );
-    Bitmap GetBitmapFromHbitmap( HBITMAP hh );
+    Bitmap GetBitmapFromHbitmap( BITMAPINFO* hh );
 }
 
 #endif

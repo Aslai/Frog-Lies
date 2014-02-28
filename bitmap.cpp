@@ -55,13 +55,47 @@ namespace FrogLies {
             free( pngdata );
         }
     }
-    void Bitmap::Write( int width, int height, void* data ) {
-
+    void Bitmap::Write( int width, int height, void* datta, int pixlen ) {
+        const char* data = ( const char* )datta;
         if( Data ) {
             free( Data );
         }
-        Data = ( unsigned char* ) malloc( width * height * 4 );
-        memcpy( Data, data, width * height * 4 );
+        if( height >= 0 ) {
+            Data = ( unsigned char* ) malloc( width * height * 4 );
+            if( pixlen == 4 ) {
+                memcpy( Data, data, width * height * 4 );
+            } else {
+                for( int i = 0; i < width * height; ++i ) {
+                    if( pixlen == 3 ) {
+                        Data[i * 4 + 0] = data[i * 3 + 0];
+                        Data[i * 4 + 1] = data[i * 3 + 1];
+                        Data[i * 4 + 2] = data[i * 3 + 2];
+                        Data[i * 4 + 3] = 0xFF;
+
+                    }
+                }
+            }
+        } else {
+            height = -height;
+            Data = ( unsigned char* ) malloc( width * height * 4 );
+
+            for( int i = 0; i < height; ++i ) {
+                if( pixlen == 4 ) {
+                    memcpy( Data + ( i * width * 4 ), data + ( ( height - 1 - i )*width * 4 ), width * 4 );
+                } else {
+                    for( int j = 0; j < width; ++j ) {
+                        if( pixlen == 3 ) {
+                            Data[( i * width + j ) * 4 + 0] = data[( ( height - 1 - i ) * width + j ) * 3 + 0];
+                            Data[( i * width + j ) * 4 + 1] = data[( ( height - 1 - i ) * width + j ) * 3 + 1];
+                            Data[( i * width + j ) * 4 + 2] = data[( ( height - 1 - i ) * width + j ) * 3 + 2];
+                            Data[( i * width + j ) * 4 + 3] = 0xFF;
+
+                        }
+                    }
+                }
+            }
+
+        }
         Width = width;
         Height = height;
     }
@@ -225,31 +259,12 @@ namespace FrogLies {
     }
 
     Bitmap *Bitmap::self;
-    Bitmap GetBitmapFromHbitmap( HBITMAP hh ) {
+    Bitmap GetBitmapFromHbitmap( BITMAPINFO* bmi ) {
         Bitmap ret;
-        HWND h = GetDesktopWindow();
-
-        HDC hDC = GetDC( h );
-        HDC hCaptureDC = CreateCompatibleDC( hDC );
-
-        BITMAPINFOHEADER bmi = {0};
-        bmi.biSize = sizeof( BITMAPINFOHEADER );
-
-        GetDIBits( hCaptureDC, hh, 0, 0, NULL, ( BITMAPINFO* )&bmi, DIB_RGB_COLORS );
-
-        BYTE* ScreenData = ( BYTE* )malloc( 4 * -bmi.biWidth * -bmi.biHeight );
-
-        GetDIBits( hCaptureDC, hh, 0, -bmi.biHeight, ScreenData, ( BITMAPINFO* )&bmi, DIB_RGB_COLORS );
-
-        ret.Write( bmi.biWidth, -bmi.biHeight, ScreenData );
-        free( ScreenData );
-
-
-        // SaveCapturedBitmap(hCaptureBitmap); //Place holder - Put your code
-        //here to save the captured image to disk
-        ReleaseDC( h, hDC );
-        DeleteDC( hCaptureDC );
-
+        if( bmi->bmiHeader.biCompression != 0 ) {
+            return ret;
+        }
+        ret.Write( bmi->bmiHeader.biWidth, -bmi->bmiHeader.biHeight, bmi->bmiColors + 3, bmi->bmiHeader.biBitCount / 8 );
         return ret;
     }
     Bitmap GetWindow( HWND h ) {
