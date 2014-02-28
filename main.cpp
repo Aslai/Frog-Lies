@@ -38,7 +38,7 @@
 #include "froglies.h"
 #include "mutex.h"
 
-#define CLASSNAME   "winss"
+#define CLASSNAME   "FrogLies"
 #define WINDOWTITLE "FrogLies"
 #define ICON_MESSAGE (WM_USER + 1)
 
@@ -164,6 +164,20 @@ namespace FrogLies {
         lock.Lock();
         uploadthreadrunning = 0;
         lock.Unlock();
+    }
+
+    void WaitForUploads(){
+        int i = 100;
+        Sleep(2000);
+        lock.Lock();
+        while( uploadthreadrunning > 0 && i > 0 ){
+            lock.Unlock();
+            Sleep(100);
+            i--;
+            lock.Lock();
+        }
+        lock.Unlock();
+
     }
 
     void DoUpload( int type, int x = -1, int y = -1, int w = -1, int h = -1 ) {
@@ -370,7 +384,48 @@ namespace FrogLies {
         POINT curPoint;
         UINT clicked;
 
+        static int passargs[4]={0,0,0,0};
+
         switch ( msg ) {
+            case 59090:{
+                DoUpload( UPLOAD_WINDOW );
+                SetClipboard( whff.GetLastUpload() );
+            } break;
+            case 59091:{
+                DoUpload( UPLOAD_SCREEN );
+                SetClipboard( whff.GetLastUpload() );
+            } break;
+            case 59092:{
+                DoUpload( UPLOAD_CLIP );
+                SetClipboard( whff.GetLastUpload() );
+            } break;
+            case 59093:{
+                passargs[0] = wparam;
+                passargs[1] = lparam;
+                if( passargs[2] != 0 || passargs[3] != 0 )
+                    goto UPLOADCROP;
+            } break;
+            case 59094:{
+                passargs[2] = wparam;
+                passargs[3] = lparam;
+                if( passargs[0] == 0 && passargs[1] == 0 )
+                    break;
+            }
+            case 59095:{
+            UPLOADCROP:
+                if (passargs[0] == 0 || passargs[1] == 0 || passargs[2] == 0 || passargs[3] == 0) {
+                    sayString( "Non-int CLI for crop.", "Error" );
+                }
+
+                Bitmap mb = GetWindow( GetDesktopWindow() );
+                mb.Crop( passargs[0], passargs[1], passargs[2], passargs[3] );
+                void* data = mb.ReadPNG();
+                if( data != 0 ) {
+                    Upload( "png", data, mb.PNGLen() );
+                    SetClipboard( whff.GetLastUpload() );
+                }
+            } break;
+
             case WM_CREATE:
                 menu = CreatePopupMenu();
                 AppendMenu( menu, MF_STRING | MF_DISABLED, MENU_NAME, "Frog-Lies" );
@@ -466,7 +521,7 @@ namespace FrogLies {
             default:
                 return DefWindowProc( hwnd, msg, wparam, lparam );
         };
-        return 0;
+        return DefWindowProc( hwnd, msg, wparam, lparam );
     }
 
     void sayString( std::string str, std::string title ) {
@@ -506,7 +561,7 @@ namespace FrogLies {
             else{ fwrite(data, datalen, 1, f); }
 
             fclose(f);
-            system("pause");
+            //system("pause");
         }
 
         SetClipboard( whff.GetLastUpload() );
@@ -713,21 +768,43 @@ std::vector<std::string> ParseCmdLine( const char* cmdline ) {
     return args;
 }
 
-void HandleArgs( const char* cmdline ) {
+int HandleArgs( const char* cmdline ) {
     std::vector< std::string > args = ParseCmdLine( cmdline );
     if (args.size() == 0){
-        return;
+        return 0;
     }
-    if (args[0].compare("-window") == 0){
-        DoUpload( UPLOAD_WINDOW );
+    HWND parent = FindWindowEx( NULL, NULL, "FrogLies", NULL );
+    if (args[0] == "--window"){
+        if( parent != NULL ){
+            PostMessage( parent, 59090, 0, 0 );
+        }
+        else {
+            DoUpload( UPLOAD_WINDOW );
+            SetClipboard( whff.GetLastUpload() );
+        }
+        return 1;
     }
-    if (args[0].compare("-screen") == 0){
-        DoUpload( UPLOAD_SCREEN );
+    if (args[0] == "--screen"){
+        if( parent != NULL ){
+            PostMessage( parent, 59091, 0, 0 );
+        }
+        else {
+            DoUpload( UPLOAD_SCREEN );
+            SetClipboard( whff.GetLastUpload() );
+        }
+        return 1;
     }
-    if (args[0].compare("-clip") == 0){
-        DoUpload( UPLOAD_CLIP );
+    if (args[0] == "--clip"){
+        if( parent != NULL ){
+            PostMessage( parent, 59092, 0, 0 );
+        }
+        else {
+            DoUpload( UPLOAD_CLIP );
+            SetClipboard( whff.GetLastUpload() );
+        }
+        return 1;
     }
-    if (args[0].compare("-crop") == 0){
+    if (args[0] == "--crop"){
         int passargs[4];
         if (args.size() == 5){
             passargs[0] = strtol(args[1].c_str(), NULL, 10);
@@ -737,26 +814,39 @@ void HandleArgs( const char* cmdline ) {
             if (passargs[0] == 0 || passargs[1] == 0 || passargs[2] == 0 || passargs[3] == 0) {
              sayString( "Non-int CLI for crop.", "Error" );
             }
-            Bitmap mb = GetWindow( GetDesktopWindow() );
-            mb.Crop( passargs[0], passargs[1], passargs[2], passargs[3] );
-            void* data = mb.ReadPNG();
-            if( data != 0 ) {
-                Upload( "png", data, mb.PNGLen() );
+
+            if( parent != NULL ){
+                PostMessage( parent, 59093, passargs[0], passargs[1] );
+                PostMessage( parent, 59094, passargs[2], passargs[3] );
             }
+            else {
+                Bitmap mb = GetWindow( GetDesktopWindow() );
+                mb.Crop( passargs[0], passargs[1], passargs[2], passargs[3] );
+                void* data = mb.ReadPNG();
+                if( data != 0 ) {
+                    Upload( "png", data, mb.PNGLen() );
+                    SetClipboard( whff.GetLastUpload() );
+                }
+            }
+            return 1;
         }
         else {
-            sayString( "Invalid number of CLIs for crop.", "Error" );
+            printf( "Invalid number of arguments for crop.\n" );
         }
+        return 1;
     }
-
+    return 1;
 }
 
 
 int WINAPI WinMain( HINSTANCE thisinstance, HINSTANCE previnstance, LPSTR cmdline, int ncmdshow ) {
     //printf("%s\n", cmdline );
-    HandleArgs( cmdline );
-    ReadConf( "conf.cfg" );
 
+    ReadConf( "conf.cfg" );
+    if( HandleArgs( cmdline ) ){
+        WaitForUploads();
+        return 0;
+    }
 
     HWND        fgwindow = GetForegroundWindow(); /* Current foreground window */
     MSG         msg;
