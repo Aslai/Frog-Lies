@@ -75,6 +75,9 @@ namespace FrogLies {
     NOTIFYICONDATA nid;
     HICON IconA;
     HICON IconB;
+    std::string zipformat = "zip";
+    std::string zipformatext = "zip";
+
 
     char clickDrag;     //States are NOTNOW, WAITING, DRAGGING.
     POINT dragStart;
@@ -107,8 +110,10 @@ namespace FrogLies {
 
     void Upload( std::string type, const void* data, size_t datalen );
     void Upload( std::string fname );
+    std::string Timestamp(std::string type="ss");
 
     void __uploadthread( void* ) {
+
         lock.Lock();
         if( uploadthreadrunning ) {
             return;
@@ -182,7 +187,47 @@ namespace FrogLies {
                                 } break;
                             case CF_HDROP: {
                                     int num = DragQueryFile( ( HDROP ) pchData, 0xFFFFFFFF, NULL, 0 );
-                                    if( num >= 0 ) {
+                                    if( num > 1 ) {
+
+                                        std::string fname = Timestamp( "files" );
+                                        std::string cmdline="";
+                                        char namea[200];
+                                        GetEnvironmentVariable( "TEMP", namea, 200 );
+                                        std::string cmdline2 = namea;
+                                        cmdline2 += "\\"+fname+"."+zipformatext;
+                                        std::string cmdline3 = namea;
+                                        cmdline3 += "\\"+fname+".tar";
+
+
+
+                                        while( --num >= 0){
+                                            char name[2000];
+                                            DragQueryFile( ( HDROP ) pchData, num, name, 2000 );
+                                            cmdline += " \"";
+                                            cmdline += name;
+                                            cmdline += "\"";
+                                        }
+                                        if( zipformat == "bzip2" || zipformat == "gzip" ){
+                                            system( ("7za a -ttar \"%TEMP%\\"+fname+".tar\" "+cmdline).c_str() );
+                                            cmdline = "%TEMP%\\"+fname+".tar";
+                                            FILE* f = fopen( cmdline3.c_str(), "r" );
+                                            if( f == 0 )
+                                                break;
+                                            fclose(f);
+                                        }
+
+                                        system(("del \""+cmdline2+"\"").c_str());
+                                        printf("%s\n",("7za a -t"+zipformat+" \"%TEMP%\\"+fname+"."+zipformatext+"\" "+cmdline).c_str());
+                                        system( ("7za a -t"+zipformat+" \"%TEMP%\\"+fname+"."+zipformatext+"\" "+cmdline).c_str() );
+                                        FILE* f = fopen( cmdline2.c_str(), "r" );
+                                        if( f == 0 )
+                                            break;
+                                        fclose(f);
+
+                                        printf("%s\n", cmdline2.c_str());
+                                        Upload( cmdline2 );
+                                    }
+                                    else {
                                         char name[2000];
                                         DragQueryFile( ( HDROP ) pchData, 0, name, 2000 );
                                         Upload( name );
@@ -244,7 +289,7 @@ namespace FrogLies {
     }
 
     std::map<std::string, int> keyspressed;
-    std::string Timestamp();
+
     void sayString( std::string message, std::string title );
     int ReadKey( std::string key ) {
         if( keyspressed[key] == 2 ) {
@@ -273,13 +318,13 @@ namespace FrogLies {
         }
     }
 
-    std::string Timestamp() {
+    std::string Timestamp( std::string type ) {
         time_t rawtime;
         struct tm * timeinfo;
         time ( &rawtime );
         timeinfo = localtime ( &rawtime );
         char str[64];
-        snprintf( str, 64, "ss at %s", asctime( timeinfo ) );
+        snprintf( str, 64, "%s at %s", type.c_str(), asctime( timeinfo ) );
         int i = 0;
         while ( str[i] ) {
             i++;
@@ -746,9 +791,13 @@ UPLOADCROP:
         L.run();
 
         bubble = L.get<int>( "bubble" );
+        if( L.get<char*>("copyLoc")[0]!=0 )
+            copyLoc = L.get<char*>( "copyLoc" );
+        if( L.get<char*>("zipFormat")[0]!=0 )
+            zipformat = L.get<char*>("zipFormat");
+        if( L.get<char*>("zipFormatExtension")[0]!=0 )
+            zipformatext = L.get<char*>("zipFormatExtension");
 
-
-        copyLoc = L.get<char*>( "copyLoc" );
 
         //printf("%s", copyLoc);
     }
@@ -904,6 +953,7 @@ int HandleArgs( const char* cmdline ) {
 
 
 int WINAPI WinMain( HINSTANCE thisinstance, HINSTANCE previnstance, LPSTR cmdline, int ncmdshow ) {
+
     //printf("%s\n", cmdline );
 
     ReadConf( "conf.cfg" );

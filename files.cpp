@@ -671,7 +671,7 @@ namespace FrogLies {
             size_t hasread = fread( ret + i, 1, length - i, f );
             i += hasread;
             if( feof( f ) ) {
-                length = i;
+                length = ftell(f);
                 break;
             }
             length *= 2;
