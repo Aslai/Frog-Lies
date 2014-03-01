@@ -112,6 +112,27 @@ namespace FrogLies {
     void Upload( std::string fname );
     std::string Timestamp(std::string type="ss");
 
+    //From https://stackoverflow.com/questions/12554237/hiding-command-prompt-called-by-system
+    int system_hidden(const char *cmdArgs)
+    {
+       PROCESS_INFORMATION pinfo  = {0};
+       STARTUPINFO sinfo                = {0};
+       sinfo.cb                         = sizeof(sinfo);
+
+        char* tmp = (char*) malloc( strlen( cmdArgs ) + 1 );
+        strcpy( tmp, cmdArgs );
+        if( CreateProcess(NULL, tmp, NULL, NULL, TRUE, CREATE_NO_WINDOW, NULL, NULL, &sinfo, &pinfo) ){
+
+            WaitForSingleObject( pinfo.hProcess, INFINITE );
+            CloseHandle( pinfo.hProcess );
+            CloseHandle( pinfo.hThread );
+            //Sleep(500);
+            printf("AAAA");
+        }
+        free( tmp );
+        STARTUPINFO si;
+    }
+
     void __uploadthread( void* ) {
 
         lock.Lock();
@@ -213,17 +234,18 @@ namespace FrogLies {
                                             cmdline += "\"";
                                         }
                                         if( zipformat == "bzip2" || zipformat == "gzip" ){
-                                            system( ("7za a -ttar \"%TEMP%\\"+fname+".tar\" "+cmdline).c_str() );
-                                            cmdline = "%TEMP%\\"+fname+".tar";
+                                            //system_hidden(("del \""+cmdline3+"\"").c_str());
+                                            system_hidden( ("7za a -ttar \""+cmdline3+"\" "+cmdline).c_str() );
+                                            cmdline = cmdline3;
                                             FILE* f = fopen( cmdline3.c_str(), "r" );
                                             if( f == 0 )
                                                 break;
                                             fclose(f);
                                         }
 
-                                        system(("del \""+cmdline2+"\"").c_str());
-                                        printf("%s\n",("7za a -t"+zipformat+" \"%TEMP%\\"+fname+"."+zipformatext+"\" "+cmdline).c_str());
-                                        system( ("7za a -t"+zipformat+" \"%TEMP%\\"+fname+"."+zipformatext+"\" "+cmdline).c_str() );
+                                        //system_hidden(("del \""+cmdline2+"\"").c_str());
+                                        printf("%s\n",("7za a -t"+zipformat+" \""+cmdline2+"\" "+cmdline).c_str());
+                                        system_hidden( ("7za a -t"+zipformat+" \""+cmdline2+"\" "+cmdline).c_str() );
                                         FILE* f = fopen( cmdline2.c_str(), "r" );
                                         if( f == 0 )
                                             break;
@@ -435,6 +457,10 @@ namespace FrogLies {
             msg += ( st_hook.flags << 24 );
             GetKeyNameText( msg, tmp, 0xFF );
             str = std::string( tmp );
+            for( unsigned int i = 0; i < str.length(); ++i ){
+                if( str[i] == ' ' )
+                    str[i] = '-';
+            }
             if( keyspressed[str] == 2 ) {
                 keyspressed[str] = 3;
             } else {
@@ -452,6 +478,10 @@ namespace FrogLies {
             msg += ( st_hook.flags << 24 );
             GetKeyNameText( msg, tmp, 0xFF );
             str = std::string( tmp );
+            for( unsigned int i = 0; i < str.length(); ++i ){
+                if( str[i] == ' ' )
+                    str[i] = '-';
+            }
             if( keyspressed[str] == 0 ) {
                 keyspressed[str] = 2;
             } else {
@@ -595,7 +625,7 @@ UPLOADCROP:
                         break;
                     case 0x405:
                         if( whff.GetStatus() == 200 ) {
-                            system( ( "start " + whff.GetLastUpload() ).c_str() );
+                            system_hidden( ( "start " + whff.GetLastUpload() ).c_str() );
                         }
                         break;
                     default:

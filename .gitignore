@@ -25,3 +25,11 @@
 *.depend
 *.layout
 *.zip
+
+ss/*
+*.txt
+*.Cache
+*.resources
+*.cache
+*.pdb
+*.manifest
