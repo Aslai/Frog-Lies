@@ -39,6 +39,8 @@
 #include "mutex.h"
 
 #define CLASSNAME   "FrogLies"
+#define CLASSNAMEMOUS   "FrogLiesMous"
+#define CLASSNAMETEXT   "FrogLiesText"
 #define WINDOWTITLE "FrogLies"
 #define ICON_MESSAGE (WM_USER + 1)
 
@@ -70,7 +72,11 @@ namespace FrogLies {
     bool running;
     HHOOK kbdhook;
     HHOOK mouhook;
+
     HWND hwnd;
+    HWND hwndmous;
+    HWND hwndtext;
+
     HMENU menu;
     NOTIFYICONDATA nid;
     HICON IconA;
@@ -84,11 +90,17 @@ namespace FrogLies {
     HCURSOR dfltCursor;
     HCURSOR MyCursor;
 
+    HFONT hFont;
+
+    BYTE color;
+
+    int trans = 0;
+
     char* copyLoc;
 
     int doquit = 0;
 
-    bool bubble;
+    bool bubble = true;
 
     WHFF whff( "" );
 
@@ -107,6 +119,7 @@ namespace FrogLies {
 
     void Upload( std::string type, const void* data, size_t datalen );
     void Upload( std::string fname );
+    LRESULT CALLBACK handlemouse( int code, WPARAM wp, LPARAM lp );
 
     void __uploadthread( void* ) {
         lock.Lock();
@@ -297,75 +310,112 @@ namespace FrogLies {
         return ToReturn;
     }
 
+    void startCrop(){
+        printf("STARTING!");
+        clickDrag = WAITING;
+        mouhook = SetWindowsHookEx( WH_MOUSE_LL, ( HOOKPROC )handlemouse, GetModuleHandle( NULL ), 0 );
+
+        ShowWindow( hwndmous, SW_SHOW );
+
+        SetLayeredWindowAttributes( hwndmous, RGB(255,255,255), 1, LWA_ALPHA );
+
+        dragEnd.x = dragEnd.y = dragStart.x = dragStart.y = coords.x = coords.y = 0;
+    }
+    void endCrop(){
+        printf("ENDING!");
+        clickDrag = NOTNOW;
+        UnhookWindowsHookEx( mouhook );
+        mouhook = NULL;
+
+        ShowWindow( hwnd, SW_HIDE );
+        ShowWindow( hwndmous, SW_HIDE );
+        ShowWindow( hwndtext, SW_HIDE );
+    }
+
     LRESULT CALLBACK handlemouse( int code, WPARAM wp, LPARAM lp ) {
 
         if ( clickDrag ) {
             if ( ( wp == WM_LBUTTONDOWN || wp == WM_LBUTTONUP || wp == WM_MOUSEMOVE ) ) {
                 MSLLHOOKSTRUCT st_hook = *( ( MSLLHOOKSTRUCT* )lp );
 
+                coords = dragEnd; //used as a storage value for 'if (keyspressed["Ctrl"])'
+
                 dragEnd = st_hook.pt;
+
+                SetWindowPos( hwndmous, HWND_TOPMOST, dragEnd.x - 200, dragEnd.y - 200, 400, 400, 0 );
+                UpdateWindow(hwndmous);
 
                 if ( clickDrag == WAITING ) {
                     coords = dragEnd;
                 } else {
+                    if (keyspressed["Ctrl"] && dragStart.x - dragEnd.x != 0 && dragStart.y - dragEnd.y != 0){
+                        dragStart.x -= coords.x - dragEnd.x;
+                        dragStart.y -= coords.y - dragEnd.y;
+                    }
+                    if (keyspressed["Shift"]){      // Will also need a message that calls this method when shift is pressed.
+                        //printf("SHIFT!!!");
+
+                        int w, h;
+
+                        w = dragStart.x - dragEnd.x;
+                        h = dragStart.y - dragEnd.y;
+
+                        if( w < 0 ) { w = -w; }
+                        if( h < 0 ) { h = -h; }
+
+                        if (w < h){
+                            if (dragStart.y - dragEnd.y < 0){
+                                dragEnd.y = dragStart.y + w;
+                            }
+                            else{
+                                dragEnd.y = dragStart.y - w;
+                            }
+                        }
+                        else{
+                            if (dragStart.x - dragEnd.x < 0){
+                                dragEnd.x = dragStart.x + h;
+                            }
+                            else{
+                                dragEnd.x = dragStart.x - h;
+                            }
+                        }
+
+                    }
                     coords.x = dragEnd.x - dragStart.x;
                     coords.y = dragEnd.y - dragStart.y;
                 }
 
-                int x, y, w, h;
-                x = dragStart.x < dragEnd.x ? dragStart.x : dragEnd.x;
-                y = dragStart.y < dragEnd.y ? dragStart.y : dragEnd.y;
-                w = dragStart.x - dragEnd.x;
-                h = dragStart.y - dragEnd.y;
-                if( w < 0 ) { w = -w; }
-                if( h < 0 ) { h = -h; }
-
-                if( clickDrag != DRAGGING ) {
-                    SetLayeredWindowAttributes( hwnd, RGB( 255, 255, 255 ), 1, LWA_ALPHA );
-                    SetWindowPos( hwnd, HWND_TOPMOST, dragEnd.x - 100, dragEnd.y - 100, 200, 200, 0 );
-                } else {
-                    SetWindowPos( hwnd, HWND_TOPMOST, x, y, w, h, 0 );
-                    if( clickDrag != NOTNOW ) {
-                        SetLayeredWindowAttributes( hwnd, RGB( 255, 255, 255 ), 100, LWA_ALPHA );
-                    }
-                }
-
-                //printf("State: %i \t MPos: [%i, %i] \t Coord: [%i, %i]\n", clickDrag, dragEnd.x - GetSystemMetrics( SM_XVIRTUALSCREEN ), dragEnd.y - GetSystemMetrics( SM_YVIRTUALSCREEN ), coords.x, coords.y);
-
-                //printf("HANDMOUS- wp: 0x%X \t md: 0x%X \t fl: 0x%X\n", wp, st_hook.mouseData, st_hook.flags);
-
                 if ( wp == WM_LBUTTONDOWN ) {
                     dragStart = dragEnd;
+
+                    coords.x = dragEnd.x - dragStart.x;
+                    coords.y = dragEnd.y - dragStart.y;
+
                     clickDrag = DRAGGING;
+
                     printf( "DOWN!\n" );
+
+                    ShowWindow( hwnd, SW_SHOW );
+                    ShowWindow( hwndtext, SW_SHOW );
+
+                    SetLayeredWindowAttributes( hwnd, RGB(255,255,255), 255, LWA_COLORKEY );
+                    SetLayeredWindowAttributes( hwndtext, RGB(255,255,254), 255, LWA_COLORKEY );
                 }
                 if ( wp == WM_LBUTTONUP ) {
-                    SetLayeredWindowAttributes( hwnd, RGB( 255, 255, 255 ), 0, LWA_ALPHA );
-                    printf( "\n\n\n\n\n%d\n\n\n\n\n\n", GetSystemMetrics( SM_XVIRTUALSCREEN ) );
                     DoUpload( UPLOAD_CROP, dragStart.x - GetSystemMetrics( SM_XVIRTUALSCREEN ), dragStart.y - GetSystemMetrics( SM_YVIRTUALSCREEN ), coords.x, coords.y );
-                    /*
-                    Bitmap mb = GetWindow( GetDesktopWindow() );
-                    mb.Crop( dragStart.x, dragStart.y, coords.x, coords.y );
-                    void* data = mb.ReadPNG();
-                    if( data != 0 ) {
-                            Upload( "png", data, mb.PNGLen() );
-                        }
-                        */
-
-                    clickDrag = NOTNOW;
                     printf( "UP!\n" );
-                    UnhookWindowsHookEx( mouhook );
-                    mouhook = NULL;
-                    MyCursor = dfltCursor;
-                    SetCursor( dfltCursor );
-                    ShowWindow( hwnd, SW_HIDE );
+                    endCrop();
+                    //MyCursor = dfltCursor;
+                    //SetCursor( dfltCursor );
+                }
+
+                if( clickDrag == DRAGGING ) {
+                    //printf("THERE!");
+                    RedrawWindow(hwndtext, NULL, NULL, RDW_INVALIDATE);
+                    RedrawWindow(hwnd, NULL, NULL, RDW_INVALIDATE);
                 }
             }
         } else {
-            UnhookWindowsHookEx( mouhook );
-            mouhook = NULL;
-            MyCursor = dfltCursor;
-            SetCursor( dfltCursor );
             return CallNextHookEx( mouhook, code, wp, lp );
         }
         if( ( wp == WM_LBUTTONDOWN || wp == WM_LBUTTONUP ) ) {
@@ -392,7 +442,7 @@ namespace FrogLies {
             }
             //fprintf(out, "%s\n", str.c_str());
 
-            printf( "%s up\n", str.c_str() );
+            //printf( "%s up\n", str.c_str() );
         } else if ( code == HC_ACTION && ( wp == WM_SYSKEYDOWN || wp == WM_KEYDOWN ) ) {
             char tmp[0xFF] = {0};
             std::string str;
@@ -408,11 +458,91 @@ namespace FrogLies {
                 keyspressed[str] = 1;
             }
 
-            printf( "%s down\n", str.c_str() );
+            //printf( "%s down\n", str.c_str() );
         }
         CheckKeys();
 
         return CallNextHookEx( kbdhook, code, wp, lp );
+    }
+
+    LRESULT CALLBACK mouswindowprocedure( HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam ) {
+
+        switch ( msg ) {
+            case WM_ERASEBKGND:
+                return (LRESULT)1;
+            case WM_SETCURSOR:
+                SetCursor( MyCursor );
+                break;
+            default:
+                return DefWindowProc( hwnd, msg, wparam, lparam );
+        };
+        return DefWindowProc( hwnd, msg, wparam, lparam );
+    }
+
+    LRESULT CALLBACK textwindowprocedure( HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam ) {
+        POINT curPoint;
+        UINT clicked;
+
+        PAINTSTRUCT ps;
+        HDC hdc;
+        RECT rect;
+        HRGN bgRgn;
+        HBRUSH hBrush;
+        HPEN hPen;
+
+        char str[32];
+
+        int x, y, w, h;
+        int ty;
+
+        switch ( msg ) {
+            case WM_ERASEBKGND:
+                return (LRESULT)1;
+            //*
+            case WM_PAINT:
+                if (clickDrag == DRAGGING){
+                    w = dragEnd.x - dragStart.x;
+                    h = dragEnd.y - dragStart.y;
+
+                    snprintf(str, 32, "[ %i, %i ]", w, h);
+
+                    hdc = BeginPaint(hwnd, &ps);
+
+                    GetClientRect(hwnd, &rect);
+                    bgRgn = CreateRectRgnIndirect(&rect);
+                    hBrush = CreateSolidBrush(RGB(255,255,255));
+                    FillRgn(hdc, bgRgn, hBrush);
+
+                    //hPen = CreatePen(PS_SOLID,3,color);
+                    hPen = CreatePen(PS_SOLID,3,RGB(48,98,48));
+                    SelectObject(hdc, hPen);
+                    SetBkColor(hdc, RGB(1,0,0));
+                    Rectangle(hdc, rect.left, rect.top, rect.right, rect.bottom);
+
+                    SelectObject(hdc, hFont);
+                    SetBkColor(hdc, RGB(255,255,255));
+
+                    TextOut(hdc, rect.left + 50 - ((strlen(str)-1)*7)*.5, rect.top + 2, str, strlen(str));
+
+                    DeleteObject(hBrush);
+                    DeleteObject(hPen);
+
+                    GetStockObject(WHITE_BRUSH);
+                    GetStockObject(DC_PEN);
+
+                    EndPaint(hwnd, &ps);
+                }
+                break;
+
+            case WM_CREATE:
+                break;
+            case WM_SETCURSOR:
+                SetCursor( MyCursor );
+                break;
+            default:
+                return DefWindowProc( hwnd, msg, wparam, lparam );
+        };
+        return DefWindowProc( hwnd, msg, wparam, lparam );
     }
 
     LRESULT CALLBACK windowprocedure( HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam ) {
@@ -424,6 +554,18 @@ namespace FrogLies {
         UINT clicked;
 
         static int passargs[4] = {0, 0, 0, 0};
+
+        PAINTSTRUCT ps;
+        HDC hdc;
+        RECT rect;
+        HRGN bgRgn;
+        HBRUSH hBrush;
+        HPEN hPen;
+
+        char str[32];
+
+        int x, y, w, h;
+        int ty;
 
         switch ( msg ) {
             case 59090: {
@@ -467,7 +609,63 @@ UPLOADCROP:
                     }
                 } break;
 
-            case WM_CREATE:
+            case WM_ERASEBKGND:
+                return (LRESULT)1;
+            case WM_PAINT:
+                if (clickDrag == DRAGGING){
+                    //printf("HERE!\n");
+
+                    x = dragStart.x < dragEnd.x ? dragStart.x : dragEnd.x;
+                    y = dragStart.y < dragEnd.y ? dragStart.y : dragEnd.y;
+                    w = dragEnd.x - dragStart.x;
+                    h = dragEnd.y - dragStart.y;
+
+                    snprintf(str, 32, "[ %i, %i ]", w, h);
+
+                    if( w < 0 ) { w = -w; }
+                    if( h < 0 ) { h = -h; }
+
+                    ty = h - 5;
+
+                    if (w < 175 && w > 100){
+                        ty += (175 - w)/5;
+                    }
+                    else if (w <= 100){
+                        ty += 15;
+                    }
+                    else if (h < 50){
+                        ty += (50 - h)/5;
+                    }
+
+                    //printf("x: %i, y: %i, w: %i, h: %i\n", x, y, w, h);
+
+                    SetWindowPos( hwnd, HWND_TOP, x-2, y-2, w+4, h+4, 0 );
+                    SetWindowPos( hwndtext, HWND_TOPMOST, x + w/2 - 50, y + ty, 100, 22, 0 );
+
+                    hdc = BeginPaint(hwnd, &ps);
+
+                    GetClientRect(hwnd, &rect);
+                    bgRgn = CreateRectRgnIndirect(&rect);
+                    hBrush = CreateSolidBrush(RGB(255,255,255));
+                    FillRgn(hdc, bgRgn, hBrush);
+
+                    //hPen = CreatePen(PS_SOLID,3,color);
+                    hPen = CreatePen(PS_SOLID,3,RGB(48,98,48));
+                    SelectObject(hdc, hPen);
+                    SetBkColor(hdc, RGB(1,0,0));
+                    Rectangle(hdc, rect.left, rect.top, rect.right, rect.bottom);
+
+                    DeleteObject(hBrush);
+                    DeleteObject(hPen);
+
+                    GetStockObject(WHITE_BRUSH);
+                    GetStockObject(DC_PEN);
+
+                    EndPaint(hwnd, &ps);
+                }
+                break;
+
+            case WM_CREATE: {
                 menu = CreatePopupMenu();
                 AppendMenu( menu, MF_STRING | MF_DISABLED, MENU_NAME, "Frog-Lies" );
 
@@ -490,6 +688,7 @@ UPLOADCROP:
                 AppendMenu( menu, MF_SEPARATOR, 0, NULL );
 
                 AppendMenu( menu, MF_STRING, MENU_EXIT, "Exit" );
+                }
                 break;
             case ICON_MESSAGE:
                 switch( lparam ) {
@@ -518,7 +717,7 @@ UPLOADCROP:
                                 MyCursor = dragCursor;
                                 SetCursor( dragCursor );
 
-                                SetLayeredWindowAttributes( hwnd, RGB( 255, 255, 255 ), 0, LWA_ALPHA );
+                                //SetLayeredWindowAttributes( hwnd, RGB( 255, 255, 255 ), 0, LWA_ALPHA );
                                 ShowWindow( hwnd, SW_SHOW );
                                 break;
                             case MENU_SS_CLIP:
@@ -587,7 +786,7 @@ UPLOADCROP:
 
         //printf("%s", str.c_str());
 
-        whff.Upload( str, data, datalen, GetMimeFromExt( type ) );
+        //whff.Upload( str, data, datalen, GetMimeFromExt( type ) );
 
         if ( copyLoc ) {    //empty quotes to not copy...
             mkdir( copyLoc );
@@ -605,7 +804,7 @@ UPLOADCROP:
             //system("pause");
         }
 
-        SetClipboard( whff.GetLastUpload() );
+        //SetClipboard( whff.GetLastUpload() );
         sayString( Timestamp() + "." + type + " has been uploaded...", "Screenshot Taken" );
         PlaySound( MAKEINTRESOURCE( 3 ), GetModuleHandle( NULL ), SND_ASYNC | SND_RESOURCE );
     }
@@ -637,54 +836,23 @@ UPLOADCROP:
         PlaySound( MAKEINTRESOURCE( 3 ), GetModuleHandle( NULL ), SND_ASYNC | SND_RESOURCE );
     }
 
-
     void CheckKeys() {
         if( ShortcutDesk.IsHit() ) {
             DoUpload( UPLOAD_SCREEN );
-            /*Bitmap mb = GetWindow( GetDesktopWindow() );
-            void* data = mb.ReadPNG();
-            Upload( "png", data, mb.PNGLen() );*/
         }
 
         if ( ShortcutWin.IsHit() ) {
             DoUpload( UPLOAD_WINDOW );
-            /*WHFF whff( "" );
-            Bitmap mb = GetWindow( GetForegroundWindow() );
-            void* data = mb.ReadPNG();
-            Upload( "png", data, mb.PNGLen() );*/
         }
 
         if ( ShortcutCrop.IsHit() ) {
-            clickDrag = WAITING;
-            mouhook = SetWindowsHookEx( WH_MOUSE_LL, ( HOOKPROC )handlemouse, GetModuleHandle( NULL ), 0 );
-            MyCursor = dragCursor;
-            SetCursor( dragCursor );
-
-            SetLayeredWindowAttributes( hwnd, RGB( 255, 255, 255 ), 0, LWA_ALPHA );
-            ShowWindow( hwnd, SW_SHOW );
+            startCrop();
         }
         if ( ShortcutStop.IsHit() ) {
-            clickDrag = NOTNOW;
-            UnhookWindowsHookEx( mouhook );
-            mouhook = NULL;
-            MyCursor = dfltCursor;
-            SetCursor( dfltCursor );
-            ShowWindow( hwnd, SW_HIDE );
+            endCrop();
         }
         if ( ShortcutClip.IsHit() ) {
             DoUpload( UPLOAD_CLIP );
-
-            /*WHFF whff( "" );
-            if ( !OpenClipboard( NULL ) ) {
-                    return;
-                }
-            HANDLE hClipboardData = GetClipboardData( CF_TEXT );
-            char *pchData = ( char* )GlobalLock( hClipboardData );
-            void* data = ( void* )pchData;
-            printf( "%s\n", pchData );
-            Upload( "txt", data, strlen( pchData ) );
-            GlobalUnlock( hClipboardData );
-            CloseClipboard();*/
         }
         if ( ShortcutQuit.IsHit() ) {
             sayString( "Frog-lies is quitting", "Quitting" );
@@ -700,6 +868,7 @@ UPLOADCROP:
                     PostMessage( hwnd, WM_CLOSE, 0, 0 );
                 }
             }
+
             Sleep( 1000 );
             nid.uFlags = NIF_MESSAGE | NIF_ICON | NIF_TIP;
             nid.hIcon = IconA;
@@ -732,6 +901,7 @@ UPLOADCROP:
 
         Lua L( buff.c_str(), "Configuration", 0 );
         L.funcreg<int, Shortcut*, const char*, SetShortcut >( "shortcut" );
+
         L.set( "TRUE", 1 );
         L.set( "SHORTCUT_WIN",  &ShortcutWin );
         L.set( "SHORTCUT_DESK", &ShortcutDesk );
@@ -742,12 +912,9 @@ UPLOADCROP:
         L.set( "true", 1 );
         L.set( "false", 0 );
 
-
         L.run();
 
         bubble = L.get<int>( "bubble" );
-
-
         copyLoc = L.get<char*>( "copyLoc" );
 
         //printf("%s", copyLoc);
@@ -902,7 +1069,6 @@ int HandleArgs( const char* cmdline ) {
     return 1;
 }
 
-
 int WINAPI WinMain( HINSTANCE thisinstance, HINSTANCE previnstance, LPSTR cmdline, int ncmdshow ) {
     //printf("%s\n", cmdline );
 
@@ -912,15 +1078,22 @@ int WINAPI WinMain( HINSTANCE thisinstance, HINSTANCE previnstance, LPSTR cmdlin
         return 0;
     }
 
+    dragCursor = LoadCursor( NULL, IDC_CROSS );
+    dfltCursor = GetCursor();
+    MyCursor = dfltCursor;
+
     HWND        fgwindow = GetForegroundWindow(); /* Current foreground window */
     MSG         msg;
     WNDCLASSEX  windowclass;
     HINSTANCE   modulehandle;
 
+    hFont = (HFONT)GetStockObject(DEVICE_DEFAULT_FONT);
+    color = RGB(48,98,48);
+
     windowclass.hInstance = thisinstance;
     windowclass.lpszClassName = CLASSNAME;
     windowclass.lpfnWndProc = windowprocedure;
-    windowclass.style = CS_DBLCLKS&~WS_VISIBLE;
+    windowclass.style = (CS_DBLCLKS&~WS_VISIBLE) | 0x00020000;
     windowclass.cbSize = sizeof( WNDCLASSEX );
     windowclass.hIcon = LoadIcon( NULL, IDI_APPLICATION );
     windowclass.hIconSm = LoadIcon( NULL, IDI_APPLICATION );
@@ -928,11 +1101,25 @@ int WINAPI WinMain( HINSTANCE thisinstance, HINSTANCE previnstance, LPSTR cmdlin
     windowclass.lpszMenuName = NULL;
     windowclass.cbClsExtra = 0;
     windowclass.cbWndExtra = 0;
-    windowclass.hbrBackground =  CreateSolidBrush( RGB( 0, 0, 255 ) );
-    //windowclass.style
-
+    ///windowclass.hbrBackground =  CreateSolidBrush( RGB( 0, 0, 255 ) );
+    windowclass.hbrBackground =  CreateSolidBrush( RGB(255,255,255) );
+    windowclass.hCursor  = dragCursor;
     if ( !( RegisterClassEx( &windowclass ) ) ) {
         return 1;
+    }
+
+    windowclass.lpszClassName = CLASSNAMETEXT;
+    windowclass.style = (CS_DBLCLKS&~WS_VISIBLE) | 0x00020000;
+    windowclass.lpfnWndProc = textwindowprocedure;
+    if ( !( RegisterClassEx( &windowclass ) ) ) {
+        return 2;
+    }
+
+    windowclass.lpszClassName = CLASSNAMEMOUS;
+    windowclass.style = CS_DBLCLKS&~WS_VISIBLE;
+    windowclass.lpfnWndProc = mouswindowprocedure;
+    if ( !( RegisterClassEx( &windowclass ) ) ) {
+        return 3;
     }
 
     hwnd = CreateWindowEx( WS_EX_LAYERED | WS_EX_TOOLWINDOW, CLASSNAME, WINDOWTITLE, WS_POPUP,
@@ -940,29 +1127,49 @@ int WINAPI WinMain( HINSTANCE thisinstance, HINSTANCE previnstance, LPSTR cmdlin
                            thisinstance, NULL );
 
     if ( !( hwnd ) ) {
-        return 1;
+        return 4;
+    }
+
+    hwndmous = CreateWindowEx( WS_EX_LAYERED | WS_EX_TOOLWINDOW, CLASSNAMEMOUS, WINDOWTITLE, WS_POPUP,
+                           CW_USEDEFAULT, CW_USEDEFAULT, 20, 20, HWND_DESKTOP, NULL,
+                           thisinstance, NULL );
+
+    if ( !( hwndmous ) ) {
+        return 5;
+    }
+
+    hwndtext = CreateWindowEx( WS_EX_LAYERED | WS_EX_TOOLWINDOW, CLASSNAMETEXT, WINDOWTITLE, WS_POPUP,
+                           CW_USEDEFAULT, CW_USEDEFAULT, 20, 20, HWND_DESKTOP, NULL,
+                           thisinstance, NULL );
+
+    if ( !( hwndtext ) ) {
+        return 6;
     }
 
     ShowWindow( hwnd, SW_HIDE );
+    ShowWindow( hwndmous, SW_HIDE );
+    ShowWindow( hwndtext, SW_HIDE );
+
     UpdateWindow( hwnd );
-    SetForegroundWindow( fgwindow ); /* Give focus to the previous fg window */
+    UpdateWindow( hwndmous );
+    UpdateWindow( hwndtext );
 
+    SetForegroundWindow( fgwindow );
 
-    dragCursor = LoadCursor( NULL, IDC_CROSS );
-    dfltCursor = GetCursor();
-    MyCursor = dfltCursor;
+//    SetWindowPos( hwnd, HWND_TOP, 0, 0, 0, 0, 0 );
+//    SetWindowPos( hwndtext, HWND_TOP, 0, 0, 0, 0, 0 );
+//    SetWindowPos( hwndmous, HWND_TOPMOST, 0, 0, 0, 0, 0 );
+
+    SetWindowPos( hwnd, HWND_TOP, GetSystemMetrics( SM_CXVIRTUALSCREEN ), 0, 20, 20, 0 );
+    SetWindowPos( hwndtext, HWND_TOP, GetSystemMetrics( SM_CXVIRTUALSCREEN ), 0, 20, 20, 0 );
+    SetWindowPos( hwndmous, HWND_TOPMOST, GetSystemMetrics( SM_CXVIRTUALSCREEN ), 0, 20, 20, 0 );
 
     modulehandle = GetModuleHandle( NULL );
 
-    /*#define BEGIN_IN_DRAGMODE
+    //#define BEGIN_IN_DRAGMODE
     #ifdef BEGIN_IN_DRAGMODE
-    mouhook = SetWindowsHookEx( WH_MOUSE_LL, ( HOOKPROC )handlemouse, modulehandle, 0 );
-    MyCursor = dragCursor;
-    SetCursor( dragCursor );
-    clickDrag = WAITING;
-    SetLayeredWindowAttributes( hwnd, RGB( 255, 255, 255 ), 0, LWA_ALPHA );
-    ShowWindow( hwnd, SW_SHOW );
-    #endif*/
+    startCrop();
+    #endif
 
     IconA = LoadIcon( thisinstance, MAKEINTRESOURCE( 1 ) );
     IconB = LoadIcon( thisinstance, MAKEINTRESOURCE( 2 ) );
