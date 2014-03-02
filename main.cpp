@@ -81,6 +81,9 @@ namespace FrogLies {
     NOTIFYICONDATA nid;
     HICON IconA;
     HICON IconB;
+    std::string zipformat = "zip";
+    std::string zipformatext = "zip";
+
 
     char clickDrag;     //States are NOTNOW, WAITING, DRAGGING.
     POINT dragStart;
@@ -119,9 +122,35 @@ namespace FrogLies {
 
     void Upload( std::string type, const void* data, size_t datalen );
     void Upload( std::string fname );
+<<<<<<< HEAD
     LRESULT CALLBACK handlemouse( int code, WPARAM wp, LPARAM lp );
+=======
+    std::string Timestamp(std::string type="ss");
+
+    //From https://stackoverflow.com/questions/12554237/hiding-command-prompt-called-by-system
+    int system_hidden(const char *cmdArgs)
+    {
+       PROCESS_INFORMATION pinfo  = {0};
+       STARTUPINFO sinfo                = {0};
+       sinfo.cb                         = sizeof(sinfo);
+
+        char* tmp = (char*) malloc( strlen( cmdArgs ) + 1 );
+        strcpy( tmp, cmdArgs );
+        if( CreateProcess(NULL, tmp, NULL, NULL, TRUE, CREATE_NO_WINDOW, NULL, NULL, &sinfo, &pinfo) ){
+
+            WaitForSingleObject( pinfo.hProcess, INFINITE );
+            CloseHandle( pinfo.hProcess );
+            CloseHandle( pinfo.hThread );
+            //Sleep(500);
+            printf("AAAA");
+        }
+        free( tmp );
+        STARTUPINFO si;
+    }
+>>>>>>> 983686050e8275d62c965500d6339e34a8353d34
 
     void __uploadthread( void* ) {
+
         lock.Lock();
         if( uploadthreadrunning ) {
             return;
@@ -195,7 +224,53 @@ namespace FrogLies {
                                 } break;
                             case CF_HDROP: {
                                     int num = DragQueryFile( ( HDROP ) pchData, 0xFFFFFFFF, NULL, 0 );
-                                    if( num >= 0 ) {
+                                    char names[2000];
+                                    DragQueryFile( ( HDROP ) pchData, 0, names, 2000 );
+                                    FILE* f = fopen(names, "r");
+                                    if( f )
+                                        fclose( f );
+                                    if( num > 1 || f == 0 ) {
+
+                                        std::string fname = Timestamp( "files" );
+                                        std::string cmdline="";
+                                        char namea[200];
+                                        GetEnvironmentVariable( "TEMP", namea, 200 );
+                                        std::string cmdline2 = namea;
+                                        cmdline2 += "\\"+fname+"."+zipformatext;
+                                        std::string cmdline3 = namea;
+                                        cmdline3 += "\\"+fname+".tar";
+
+
+
+                                        while( --num >= 0){
+                                            char name[2000];
+                                            DragQueryFile( ( HDROP ) pchData, num, name, 2000 );
+                                            cmdline += " \"";
+                                            cmdline += name;
+                                            cmdline += "\"";
+                                        }
+                                        if( zipformat == "bzip2" || zipformat == "gzip" ){
+                                            //system_hidden(("del \""+cmdline3+"\"").c_str());
+                                            system_hidden( ("7za a -ttar \""+cmdline3+"\" "+cmdline).c_str() );
+                                            cmdline = cmdline3;
+                                            FILE* f = fopen( cmdline3.c_str(), "r" );
+                                            if( f == 0 )
+                                                break;
+                                            fclose(f);
+                                        }
+
+                                        //system_hidden(("del \""+cmdline2+"\"").c_str());
+                                        printf("%s\n",("7za a -t"+zipformat+" \""+cmdline2+"\" "+cmdline).c_str());
+                                        system_hidden( ("7za a -t"+zipformat+" \""+cmdline2+"\" "+cmdline).c_str() );
+                                        FILE* f = fopen( cmdline2.c_str(), "r" );
+                                        if( f == 0 )
+                                            break;
+                                        fclose(f);
+
+                                        printf("%s\n", cmdline2.c_str());
+                                        Upload( cmdline2 );
+                                    }
+                                    else {
                                         char name[2000];
                                         DragQueryFile( ( HDROP ) pchData, 0, name, 2000 );
                                         Upload( name );
@@ -257,7 +332,7 @@ namespace FrogLies {
     }
 
     std::map<std::string, int> keyspressed;
-    std::string Timestamp();
+
     void sayString( std::string message, std::string title );
     int ReadKey( std::string key ) {
         if( keyspressed[key] == 2 ) {
@@ -286,13 +361,13 @@ namespace FrogLies {
         }
     }
 
-    std::string Timestamp() {
+    std::string Timestamp( std::string type ) {
         time_t rawtime;
         struct tm * timeinfo;
         time ( &rawtime );
         timeinfo = localtime ( &rawtime );
         char str[64];
-        snprintf( str, 64, "ss at %s", asctime( timeinfo ) );
+        snprintf( str, 64, "%s at %s", type.c_str(), asctime( timeinfo ) );
         int i = 0;
         while ( str[i] ) {
             i++;
@@ -435,6 +510,10 @@ namespace FrogLies {
             msg += ( st_hook.flags << 24 );
             GetKeyNameText( msg, tmp, 0xFF );
             str = std::string( tmp );
+            for( unsigned int i = 0; i < str.length(); ++i ){
+                if( str[i] == ' ' )
+                    str[i] = '-';
+            }
             if( keyspressed[str] == 2 ) {
                 keyspressed[str] = 3;
             } else {
@@ -452,6 +531,10 @@ namespace FrogLies {
             msg += ( st_hook.flags << 24 );
             GetKeyNameText( msg, tmp, 0xFF );
             str = std::string( tmp );
+            for( unsigned int i = 0; i < str.length(); ++i ){
+                if( str[i] == ' ' )
+                    str[i] = '-';
+            }
             if( keyspressed[str] == 0 ) {
                 keyspressed[str] = 2;
             } else {
@@ -744,7 +827,7 @@ UPLOADCROP:
                         break;
                     case 0x405:
                         if( whff.GetStatus() == 200 ) {
-                            system( ( "start " + whff.GetLastUpload() ).c_str() );
+                            system_hidden( ( "start " + whff.GetLastUpload() ).c_str() );
                         }
                         break;
                     default:
@@ -915,7 +998,17 @@ UPLOADCROP:
         L.run();
 
         bubble = L.get<int>( "bubble" );
+<<<<<<< HEAD
         copyLoc = L.get<char*>( "copyLoc" );
+=======
+        if( L.get<char*>("copyLoc")[0]!=0 )
+            copyLoc = L.get<char*>( "copyLoc" );
+        if( L.get<char*>("zipFormat")[0]!=0 )
+            zipformat = L.get<char*>("zipFormat");
+        if( L.get<char*>("zipFormatExtension")[0]!=0 )
+            zipformatext = L.get<char*>("zipFormatExtension");
+
+>>>>>>> 983686050e8275d62c965500d6339e34a8353d34
 
         //printf("%s", copyLoc);
     }
@@ -1070,6 +1163,7 @@ int HandleArgs( const char* cmdline ) {
 }
 
 int WINAPI WinMain( HINSTANCE thisinstance, HINSTANCE previnstance, LPSTR cmdline, int ncmdshow ) {
+
     //printf("%s\n", cmdline );
 
     ReadConf( "conf.cfg" );

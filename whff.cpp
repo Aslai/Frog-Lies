@@ -119,6 +119,7 @@ namespace FrogLies {
                 name[i] = ' ';
             }
         }
+        FILE* f = fopen("out22.txt", "wb");
 
         const char * posttemplate[] = {
             "raw",  "-----------------------------28251299466151\r\n",
@@ -147,6 +148,8 @@ namespace FrogLies {
                                            Owner.c_str(), Owner.length() );
 
         printf( "%s\n", ( char* ) postobject );
+        fwrite( postobject, length, 1, f );
+        fflush( f );
 
 #ifdef USE_CURL
         CURL *curl = curl_easy_init();
@@ -187,6 +190,7 @@ namespace FrogLies {
         void* buffer;
         size_t len;
         buffer = read_file_to_buffer( fname, len );
+        printf("\n\nDATALEN %d\n\n", len);
         Upload( basename( fname ), buffer, len, GetMimeFromExt( extension( fname ) ), password );
         free( buffer );
         return 1;

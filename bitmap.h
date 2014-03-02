@@ -3,6 +3,7 @@
 
 #include "png.h"
 #include "debug.h"
+#include <windows.h>
 
 namespace FrogLies {
     class Bitmap {
