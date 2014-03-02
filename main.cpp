@@ -98,6 +98,7 @@ namespace FrogLies {
     BYTE color;
 
     int trans = 0;
+    bool olddrag = false;
 
     char* copyLoc;
 
@@ -389,11 +390,17 @@ namespace FrogLies {
         clickDrag = WAITING;
         mouhook = SetWindowsHookEx( WH_MOUSE_LL, ( HOOKPROC )handlemouse, GetModuleHandle( NULL ), 0 );
 
-        ShowWindow( hwndmous, SW_SHOW );
-
-        SetLayeredWindowAttributes( hwndmous, RGB(255,255,255), 1, LWA_ALPHA );
-
-        dragEnd.x = dragEnd.y = dragStart.x = dragStart.y = coords.x = coords.y = 0;
+        if (olddrag){
+            MyCursor = dragCursor;
+            SetCursor( dragCursor );
+            SetLayeredWindowAttributes( hwndmous, RGB( 255, 255, 255 ), 1, LWA_ALPHA );
+            ShowWindow( hwndmous, SW_SHOW );
+        }
+        else{
+            ShowWindow( hwndmous, SW_SHOW );
+            SetLayeredWindowAttributes( hwndmous, RGB(255,255,255), 1, LWA_ALPHA );
+            dragEnd.x = dragEnd.y = dragStart.x = dragStart.y = coords.x = coords.y = 0;
+        }
     }
     void endCrop(){
         printf("ENDING!");
@@ -401,9 +408,16 @@ namespace FrogLies {
         UnhookWindowsHookEx( mouhook );
         mouhook = NULL;
 
-        ShowWindow( hwnd, SW_HIDE );
-        ShowWindow( hwndmous, SW_HIDE );
-        ShowWindow( hwndtext, SW_HIDE );
+        if (olddrag){
+            MyCursor = dfltCursor;
+            SetCursor( dfltCursor );
+            ShowWindow( hwndmous, SW_HIDE );
+        }
+        else{
+            ShowWindow( hwnd, SW_HIDE );
+            ShowWindow( hwndmous, SW_HIDE );
+            ShowWindow( hwndtext, SW_HIDE );
+        }
     }
 
     LRESULT CALLBACK handlemouse( int code, WPARAM wp, LPARAM lp ) {
@@ -412,82 +426,142 @@ namespace FrogLies {
             if ( ( wp == WM_LBUTTONDOWN || wp == WM_LBUTTONUP || wp == WM_MOUSEMOVE ) ) {
                 MSLLHOOKSTRUCT st_hook = *( ( MSLLHOOKSTRUCT* )lp );
 
-                coords = dragEnd; //used as a storage value for 'if (keyspressed["Ctrl"])'
+                if (olddrag){
+                    dragEnd = st_hook.pt;
 
-                dragEnd = st_hook.pt;
-
-                SetWindowPos( hwndmous, HWND_TOPMOST, dragEnd.x - 200, dragEnd.y - 200, 400, 400, 0 );
-                UpdateWindow(hwndmous);
-
-                if ( clickDrag == WAITING ) {
-                    coords = dragEnd;
-                } else {
-                    if (keyspressed["Ctrl"] && dragStart.x - dragEnd.x != 0 && dragStart.y - dragEnd.y != 0){
-                        dragStart.x -= coords.x - dragEnd.x;
-                        dragStart.y -= coords.y - dragEnd.y;
+                    if ( clickDrag == WAITING ) {
+                        coords = dragEnd;
+                    } else {
+                        coords.x = dragEnd.x - dragStart.x;
+                        coords.y = dragEnd.y - dragStart.y;
                     }
-                    if (keyspressed["Shift"]){      // Will also need a message that calls this method when shift is pressed.
-                        //printf("SHIFT!!!");
 
-                        int w, h;
+                    int x, y, w, h;
+                    x = dragStart.x < dragEnd.x ? dragStart.x : dragEnd.x;
+                    y = dragStart.y < dragEnd.y ? dragStart.y : dragEnd.y;
+                    w = dragStart.x - dragEnd.x;
+                    h = dragStart.y - dragEnd.y;
+                    if( w < 0 ) { w = -w; }
+                    if( h < 0 ) { h = -h; }
 
-                        w = dragStart.x - dragEnd.x;
-                        h = dragStart.y - dragEnd.y;
-
-                        if( w < 0 ) { w = -w; }
-                        if( h < 0 ) { h = -h; }
-
-                        if (w < h){
-                            if (dragStart.y - dragEnd.y < 0){
-                                dragEnd.y = dragStart.y + w;
-                            }
-                            else{
-                                dragEnd.y = dragStart.y - w;
-                            }
+                    if( clickDrag != DRAGGING ) {
+                        SetLayeredWindowAttributes( hwndmous, RGB( 255, 255, 255 ), 1, LWA_ALPHA );
+                        SetWindowPos( hwndmous, HWND_TOPMOST, dragEnd.x - 100, dragEnd.y - 100, 200, 200, 0 );
+                    } else {
+                        SetWindowPos( hwndmous, HWND_TOPMOST, x, y, w, h, 0 );
+                        if( clickDrag != NOTNOW ) {
+                            SetLayeredWindowAttributes( hwndmous, RGB( 255, 255, 255 ), 100, LWA_ALPHA );
                         }
-                        else{
-                            if (dragStart.x - dragEnd.x < 0){
-                                dragEnd.x = dragStart.x + h;
-                            }
-                            else{
-                                dragEnd.x = dragStart.x - h;
-                            }
-                        }
-
                     }
-                    coords.x = dragEnd.x - dragStart.x;
-                    coords.y = dragEnd.y - dragStart.y;
+
+                    //printf("State: %i \t MPos: [%i, %i] \t Coord: [%i, %i]\n", clickDrag, dragEnd.x - GetSystemMetrics( SM_XVIRTUALSCREEN ), dragEnd.y - GetSystemMetrics( SM_YVIRTUALSCREEN ), coords.x, coords.y);
+
+                    //printf("HANDMOUS- wp: 0x%X \t md: 0x%X \t fl: 0x%X\n", wp, st_hook.mouseData, st_hook.flags);
+
+                    if ( wp == WM_LBUTTONDOWN ) {
+                        dragStart = dragEnd;
+                        clickDrag = DRAGGING;
+                        printf( "DOWN!\n" );
+                    }
+                    if ( wp == WM_LBUTTONUP ) {
+                        SetLayeredWindowAttributes( hwndmous, RGB( 255, 255, 255 ), 0, LWA_ALPHA );
+                        printf( "\n\n\n\n\n%d\n\n\n\n\n\n", GetSystemMetrics( SM_XVIRTUALSCREEN ) );
+                        DoUpload( UPLOAD_CROP, dragStart.x - GetSystemMetrics( SM_XVIRTUALSCREEN ), dragStart.y - GetSystemMetrics( SM_YVIRTUALSCREEN ), coords.x, coords.y );
+                        /*
+                        Bitmap mb = GetWindow( GetDesktopWindow() );
+                        mb.Crop( dragStart.x, dragStart.y, coords.x, coords.y );
+                        void* data = mb.ReadPNG();
+                        if( data != 0 ) {
+                                Upload( "png", data, mb.PNGLen() );
+                            }
+                            */
+
+                        //clickDrag = NOTNOW;
+                        printf( "UP!\n" );
+
+                        endCrop();
+                    }
+                }
+                else{
+                    coords = dragEnd; //used as a storage value for 'if (keyspressed["Ctrl"])'
+
+                    dragEnd = st_hook.pt;
+
+                        SetWindowPos( hwndmous, HWND_TOPMOST, dragEnd.x - 200, dragEnd.y - 200, 400, 400, 0 );
+                        UpdateWindow(hwndmous);
+
+                        if ( clickDrag == WAITING ) {
+                            coords = dragEnd;
+                        } else {
+                            if (keyspressed["Ctrl"] && dragStart.x - dragEnd.x != 0 && dragStart.y - dragEnd.y != 0){
+                                dragStart.x -= coords.x - dragEnd.x;
+                                dragStart.y -= coords.y - dragEnd.y;
+                            }
+                            if (keyspressed["Shift"]){      // Will also need a message that calls this method when shift is pressed.
+                                //printf("SHIFT!!!");
+
+                                int w, h;
+
+                                w = dragStart.x - dragEnd.x;
+                                h = dragStart.y - dragEnd.y;
+
+                                if( w < 0 ) { w = -w; }
+                                if( h < 0 ) { h = -h; }
+
+                                if (w < h){
+                                    if (dragStart.y - dragEnd.y < 0){
+                                        dragEnd.y = dragStart.y + w;
+                                    }
+                                    else{
+                                        dragEnd.y = dragStart.y - w;
+                                    }
+                                }
+                                else{
+                                    if (dragStart.x - dragEnd.x < 0){
+                                        dragEnd.x = dragStart.x + h;
+                                    }
+                                    else{
+                                        dragEnd.x = dragStart.x - h;
+                                    }
+                                }
+
+                            }
+                            coords.x = dragEnd.x - dragStart.x;
+                            coords.y = dragEnd.y - dragStart.y;
+                        }
+
+                    if ( wp == WM_LBUTTONDOWN ) {
+                        dragStart = dragEnd;
+
+                        coords.x = dragEnd.x - dragStart.x;
+                        coords.y = dragEnd.y - dragStart.y;
+
+                        clickDrag = DRAGGING;
+
+                        printf( "DOWN!\n" );
+
+                        ShowWindow( hwnd, SW_SHOW );
+                        ShowWindow( hwndtext, SW_SHOW );
+
+                        SetLayeredWindowAttributes( hwnd, RGB(255,255,255), 255, LWA_COLORKEY );
+                        SetLayeredWindowAttributes( hwndtext, RGB(255,255,254), 255, LWA_COLORKEY );
+                    }
+                    if ( wp == WM_LBUTTONUP ) {
+                        DoUpload( UPLOAD_CROP, dragStart.x - GetSystemMetrics( SM_XVIRTUALSCREEN ), dragStart.y - GetSystemMetrics( SM_YVIRTUALSCREEN ), coords.x, coords.y );
+                        printf( "UP!\n" );
+                        endCrop();
+                        //MyCursor = dfltCursor;
+                        //SetCursor( dfltCursor );
+                    }
+
+                    if( clickDrag == DRAGGING) {
+                        //printf("THERE!");
+                        RedrawWindow(hwndtext, NULL, NULL, RDW_INVALIDATE);
+                        RedrawWindow(hwnd, NULL, NULL, RDW_INVALIDATE);
+                    }
                 }
 
-                if ( wp == WM_LBUTTONDOWN ) {
-                    dragStart = dragEnd;
-
-                    coords.x = dragEnd.x - dragStart.x;
-                    coords.y = dragEnd.y - dragStart.y;
-
-                    clickDrag = DRAGGING;
-
-                    printf( "DOWN!\n" );
-
-                    ShowWindow( hwnd, SW_SHOW );
-                    ShowWindow( hwndtext, SW_SHOW );
-
-                    SetLayeredWindowAttributes( hwnd, RGB(255,255,255), 255, LWA_COLORKEY );
-                    SetLayeredWindowAttributes( hwndtext, RGB(255,255,254), 255, LWA_COLORKEY );
-                }
-                if ( wp == WM_LBUTTONUP ) {
-                    DoUpload( UPLOAD_CROP, dragStart.x - GetSystemMetrics( SM_XVIRTUALSCREEN ), dragStart.y - GetSystemMetrics( SM_YVIRTUALSCREEN ), coords.x, coords.y );
-                    printf( "UP!\n" );
-                    endCrop();
-                    //MyCursor = dfltCursor;
-                    //SetCursor( dfltCursor );
-                }
-
-                if( clickDrag == DRAGGING ) {
-                    //printf("THERE!");
-                    RedrawWindow(hwndtext, NULL, NULL, RDW_INVALIDATE);
-                    RedrawWindow(hwnd, NULL, NULL, RDW_INVALIDATE);
-                }
+                //return -1;
             }
         } else {
             return CallNextHookEx( mouhook, code, wp, lp );
@@ -868,7 +942,9 @@ UPLOADCROP:
 
         //printf("%s", str.c_str());
 
-        //whff.Upload( str, data, datalen, GetMimeFromExt( type ) );
+        #ifdef DEBUGGING
+        whff.Upload( str, data, datalen, GetMimeFromExt( type ) );
+        #endif
 
         if ( copyLoc ) {    //empty quotes to not copy...
             mkdir( copyLoc );
@@ -886,7 +962,11 @@ UPLOADCROP:
             //system("pause");
         }
 
-        //SetClipboard( whff.GetLastUpload() );
+
+        #ifdef DEBUGGING
+        SetClipboard( whff.GetLastUpload() );
+        #endif
+
         sayString( Timestamp() + "." + type + " has been uploaded...", "Screenshot Taken" );
         PlaySound( MAKEINTRESOURCE( 3 ), GetModuleHandle( NULL ), SND_ASYNC | SND_RESOURCE );
     }
@@ -930,7 +1010,7 @@ UPLOADCROP:
         if ( ShortcutCrop.IsHit() ) {
             startCrop();
         }
-        if ( ShortcutStop.IsHit() ) {
+        if ( ShortcutStop.IsHit() && DRAGGING ) {
             endCrop();
         }
         if ( ShortcutClip.IsHit() ) {
@@ -997,6 +1077,8 @@ UPLOADCROP:
         L.run();
 
         bubble = L.get<int>( "bubble" );
+
+        olddrag = L.get<int>( "dragtype" );
 
         if( L.get<char*>("copyLoc")[0]!=0 )
             copyLoc = L.get<char*>( "copyLoc" );
@@ -1190,16 +1272,20 @@ int WINAPI WinMain( HINSTANCE thisinstance, HINSTANCE previnstance, LPSTR cmdlin
     windowclass.lpszMenuName = NULL;
     windowclass.cbClsExtra = 0;
     windowclass.cbWndExtra = 0;
-    ///windowclass.hbrBackground =  CreateSolidBrush( RGB( 0, 0, 255 ) );
-    windowclass.hbrBackground =  CreateSolidBrush( RGB(255,255,255) );
+    if (olddrag){
+        windowclass.hbrBackground =  CreateSolidBrush( RGB( 0, 0, 255 ) );
+    }
+    else{
+        windowclass.hbrBackground =  CreateSolidBrush( RGB(255,255,255) );
+    }
     windowclass.hCursor  = dragCursor;
     if ( !( RegisterClassEx( &windowclass ) ) ) {
         return 1;
     }
 
     windowclass.lpszClassName = CLASSNAMETEXT;
-    windowclass.style = (CS_DBLCLKS&~WS_VISIBLE) | 0x00020000;
     windowclass.lpfnWndProc = textwindowprocedure;
+    //windowclass.hbrBackground =  CreateSolidBrush( RGB(0,255,0) );
     if ( !( RegisterClassEx( &windowclass ) ) ) {
         return 2;
     }
@@ -1207,6 +1293,7 @@ int WINAPI WinMain( HINSTANCE thisinstance, HINSTANCE previnstance, LPSTR cmdlin
     windowclass.lpszClassName = CLASSNAMEMOUS;
     windowclass.style = CS_DBLCLKS&~WS_VISIBLE;
     windowclass.lpfnWndProc = mouswindowprocedure;
+    //windowclass.hbrBackground =  CreateSolidBrush( RGB(255,0,0) );
     if ( !( RegisterClassEx( &windowclass ) ) ) {
         return 3;
     }
@@ -1255,7 +1342,7 @@ int WINAPI WinMain( HINSTANCE thisinstance, HINSTANCE previnstance, LPSTR cmdlin
 
     modulehandle = GetModuleHandle( NULL );
 
-    //#define BEGIN_IN_DRAGMODE
+    #define BEGIN_IN_DRAGMODE
     #ifdef BEGIN_IN_DRAGMODE
     startCrop();
     #endif
