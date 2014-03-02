@@ -1342,7 +1342,7 @@ int WINAPI WinMain( HINSTANCE thisinstance, HINSTANCE previnstance, LPSTR cmdlin
 
     modulehandle = GetModuleHandle( NULL );
 
-    #define BEGIN_IN_DRAGMODE
+    //#define BEGIN_IN_DRAGMODE
     #ifdef BEGIN_IN_DRAGMODE
     startCrop();
     #endif
