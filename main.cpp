@@ -122,9 +122,9 @@ namespace FrogLies {
 
     void Upload( std::string type, const void* data, size_t datalen );
     void Upload( std::string fname );
-<<<<<<< HEAD
+
     LRESULT CALLBACK handlemouse( int code, WPARAM wp, LPARAM lp );
-=======
+
     std::string Timestamp(std::string type="ss");
 
     //From https://stackoverflow.com/questions/12554237/hiding-command-prompt-called-by-system
@@ -147,7 +147,6 @@ namespace FrogLies {
         free( tmp );
         STARTUPINFO si;
     }
->>>>>>> 983686050e8275d62c965500d6339e34a8353d34
 
     void __uploadthread( void* ) {
 
@@ -998,17 +997,13 @@ UPLOADCROP:
         L.run();
 
         bubble = L.get<int>( "bubble" );
-<<<<<<< HEAD
-        copyLoc = L.get<char*>( "copyLoc" );
-=======
+
         if( L.get<char*>("copyLoc")[0]!=0 )
             copyLoc = L.get<char*>( "copyLoc" );
         if( L.get<char*>("zipFormat")[0]!=0 )
             zipformat = L.get<char*>("zipFormat");
         if( L.get<char*>("zipFormatExtension")[0]!=0 )
             zipformatext = L.get<char*>("zipFormatExtension");
-
->>>>>>> 983686050e8275d62c965500d6339e34a8353d34
 
         //printf("%s", copyLoc);
     }
