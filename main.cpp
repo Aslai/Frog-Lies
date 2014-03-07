@@ -83,6 +83,7 @@ namespace FrogLies {
     HICON IconB;
     std::string zipformat = "zip";
     std::string zipformatext = "zip";
+    std::string ownerName = "";
 
 
     char clickDrag;     //States are NOTNOW, WAITING, DRAGGING.
@@ -106,7 +107,7 @@ namespace FrogLies {
 
     bool bubble = true;
 
-    WHFF whff( "" );
+    WHFF whff( ownerName );
 
     struct _anupload {
         int t;
@@ -592,7 +593,7 @@ namespace FrogLies {
             } else {
                 keyspressed[str] = 0;
             }
-            //fprintf(out, "%s\n", str.c_str());
+            printf( "%s\n", str.c_str());
 
             //printf( "%s up\n", str.c_str() );
         } else if ( code == HC_ACTION && ( wp == WM_SYSKEYDOWN || wp == WM_KEYDOWN ) ) {
@@ -1086,6 +1087,11 @@ UPLOADCROP:
             zipformat = L.get<char*>("zipFormat");
         if( L.get<char*>("zipFormatExtension")[0]!=0 )
             zipformatext = L.get<char*>("zipFormatExtension");
+        if( L.get<char*>("OwnerName")[0]!=0 ){
+            ownerName = L.get<char*>("OwnerName");
+            whff.SetOwner( ownerName );
+        }
+
 
         //printf("%s", copyLoc);
     }
