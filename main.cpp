@@ -942,7 +942,7 @@ UPLOADCROP:
 
         //printf("%s", str.c_str());
 
-        #ifdef DEBUGGING
+        #ifndef DEBUGGING
         whff.Upload( str, data, datalen, GetMimeFromExt( type ) );
         #endif
 
@@ -963,7 +963,7 @@ UPLOADCROP:
         }
 
 
-        #ifdef DEBUGGING
+        #ifndef DEBUGGING
         SetClipboard( whff.GetLastUpload() );
         #endif
 

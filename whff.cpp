@@ -102,7 +102,7 @@ namespace FrogLies {
         std::string value = tmp;
         free( tmp );
         if( value.substr( 0, 5 ) != "Error" ) {
-            value = "http://fiel.tk/?i=" + value;
+            value = "http://i.frogbox.es/" + value;
         }
         WHFF* self = ( WHFF* ) userdata;
         self->LastUpload = value;
