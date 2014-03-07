@@ -122,7 +122,7 @@ namespace FrogLies {
 
     int uploadthreadrunning = 0;
 
-    void Upload( std::string type, const void* data, size_t datalen );
+    void Upload( std::string type, const void* data, size_t datalen, std::string prefix = "ss" );
     void Upload( std::string fname );
 
     LRESULT CALLBACK handlemouse( int code, WPARAM wp, LPARAM lp );
@@ -216,12 +216,12 @@ namespace FrogLies {
                         char *pchData = ( char* )GlobalLock( hClipboardData );
                         switch( fmt ) {
                             case CF_TEXT:
-                                Upload( "txt", pchData, strlen( pchData ) );
+                                Upload( "txt", pchData, strlen( pchData ), "clip" );
                                 break;
                             case CF_DIB: {
                                     Bitmap b = GetBitmapFromHbitmap( ( BITMAPINFO* )pchData );
                                     void* d = b.ReadPNG();
-                                    Upload( "png", d, b.PNGLen() );
+                                    Upload( "png", d, b.PNGLen(), "clip" );
                                 } break;
                             case CF_HDROP: {
                                     int num = DragQueryFile( ( HDROP ) pchData, 0xFFFFFFFF, NULL, 0 );
@@ -938,8 +938,8 @@ UPLOADCROP:
         }
     }
 
-    void Upload( std::string type, const void* data, size_t datalen ) {
-        std::string str = Timestamp() + "." + type;
+    void Upload( std::string type, const void* data, size_t datalen, std::string prefix ) {
+        std::string str = Timestamp(prefix) + "." + type;
 
         //printf("%s", str.c_str());
 
@@ -968,7 +968,7 @@ UPLOADCROP:
         SetClipboard( whff.GetLastUpload() );
         #endif
 
-        sayString( Timestamp() + "." + type + " has been uploaded...", "Screenshot Taken" );
+        sayString( Timestamp(prefix) + "." + type + " has been uploaded...", "Screenshot Taken" );
         PlaySound( MAKEINTRESOURCE( 3 ), GetModuleHandle( NULL ), SND_ASYNC | SND_RESOURCE );
     }
     void Upload( std::string fname ) {
