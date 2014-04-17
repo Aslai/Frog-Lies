@@ -17,7 +17,6 @@
 #include <Shlwapi.h>
 #include <process.h>
 #include "png.h"
-#include <curl/curl.h>
 
 
 #include "files.h"

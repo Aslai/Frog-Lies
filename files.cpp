@@ -566,6 +566,8 @@ namespace FrogLies {
         "wb1",          "application/x-qpro",
         "wbmp",         "image/vnd.wap.wbmp",
         "web",          "application/vnd.xara",
+        "webm",         "video/webm",
+        "webp",         "image/webp",
         "wiz",          "application/msword",
         "wk1",          "application/x-123",
         "wmf",          "windows/metafile",
@@ -677,6 +679,7 @@ namespace FrogLies {
             length *= 2;
             ret = ( unsigned char* ) realloc( ret, length );
         }
+        fclose( f );
         return ret;
     }
 

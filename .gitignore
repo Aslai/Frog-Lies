@@ -33,3 +33,5 @@ ss/*
 *.cache
 *.pdb
 *.manifest
+*.7z
+*.res

@@ -1018,8 +1018,12 @@ UPLOADCROP:
             DoUpload( UPLOAD_CLIP );
         }
         if ( ShortcutQuit.IsHit() ) {
-            sayString( "Frog-lies is quitting", "Quitting" );
-            doquit = 6000;
+            if( doquit > 0 )
+                PostMessage( hwnd, WM_CLOSE, 0, 0 );
+            else {
+                sayString( "Frog-lies is quitting", "Quitting" );
+                doquit = 6000;
+            }
         }
     }
 
