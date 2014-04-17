@@ -35,3 +35,6 @@ ss/*
 *.manifest
 *.7z
 *.res
+*.cfg
+*.bat
+*.gif

@@ -193,6 +193,7 @@ namespace FrogLies {
                         if ( !OpenClipboard( NULL ) ) {
                             continue;
                         }
+
                         UINT ref = EnumClipboardFormats( 0 );
                         UINT fmt = 0;
                         do {
@@ -214,12 +215,16 @@ namespace FrogLies {
                         }
                         HANDLE hClipboardData = GetClipboardData( fmt );
                         char *pchData = ( char* )GlobalLock( hClipboardData );
+                        bool ClipClosed = false;
                         switch( fmt ) {
                             case CF_TEXT:
                                 Upload( "txt", pchData, strlen( pchData ), "clip" );
                                 break;
                             case CF_DIB: {
                                     Bitmap b = GetBitmapFromHbitmap( ( BITMAPINFO* )pchData );
+                                    GlobalUnlock( hClipboardData );
+                                    CloseClipboard();
+                                    ClipClosed = true;
                                     void* d = b.ReadPNG();
                                     Upload( "png", d, b.PNGLen(), "clip" );
                                 } break;
@@ -269,19 +274,27 @@ namespace FrogLies {
                                         fclose(f);
 
                                         printf("%s\n", cmdline2.c_str());
+                                        GlobalUnlock( hClipboardData );
+                                        CloseClipboard();
+                                        ClipClosed = true;
                                         Upload( cmdline2 );
                                     }
                                     else {
                                         char name[2000];
                                         DragQueryFile( ( HDROP ) pchData, 0, name, 2000 );
+                                        GlobalUnlock( hClipboardData );
+                                        CloseClipboard();
+                                        ClipClosed = true;
                                         Upload( name );
                                     }
                                 } break;
                         }
 
                         //Upload( "txt", data, strlen( pchData ) );
-                        GlobalUnlock( hClipboardData );
-                        CloseClipboard();
+                        if( !ClipClosed ){
+                            GlobalUnlock( hClipboardData );
+                            CloseClipboard();
+                        }
                     } break;
 
                 default:
