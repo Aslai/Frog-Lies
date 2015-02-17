@@ -188,19 +188,15 @@ namespace FrogLies {
 
 
 
-        FILE *fp = fopen( "t.png", "wb" );
         png_structp png_ptr = NULL;
         png_infop info_ptr = NULL;
         size_t x, y;
         png_byte **row_pointers = NULL;
         int pixel_size = 4;
 
-        if ( fp == NULL ) { return 0; }
-
         /* Initialize the write struct. */
         png_ptr = png_create_write_struct( PNG_LIBPNG_VER_STRING, NULL, NULL, NULL );
         if ( png_ptr == NULL ) {
-            fclose( fp );
             return 0;
         }
 
@@ -208,7 +204,6 @@ namespace FrogLies {
         info_ptr = png_create_info_struct( png_ptr );
         if ( info_ptr == NULL ) {
             png_destroy_write_struct( &png_ptr, NULL );
-            fclose( fp );
             return 0;
         }
 
@@ -253,7 +248,6 @@ namespace FrogLies {
 
         /* Finish writing. */
         png_destroy_write_struct( &png_ptr, &info_ptr );
-        fclose( fp );
         return pngdata;
     }
 

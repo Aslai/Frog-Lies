@@ -1,0 +1,210 @@
+
+div.container{
+	position: absolute;
+	width: 600px;
+	left: 300px;
+	left: calc( 50% - 350px );
+	background-color: #EEE;
+	background: linear-gradient(#EEE, #EEE, rgba( 255, 255, 255, 0 ) );
+	/*box-shadow: 0px 0px 10px 4px rgba(10,10,27,.25);*/
+	top: 0;
+	min-height: 500px;
+	height: calc( 100% - 40px );
+	padding: 20px;
+	z-index: 100000;
+}
+
+body{
+
+	background-color: #AAA;
+	background: linear-gradient( #BBB, #888 );
+	background-attachment:fixed;
+	color: #222;
+	font-family: "Verdana", sans-serif;
+	font-size: 12px;
+}
+
+label.wrap{
+	height: 40px;
+	position: relative;
+}
+
+div.formhide{
+	position: absolute;
+	width: calc( 100% );
+	height: 22px;
+
+	top: 0px;
+	opacity: 0;
+	
+	/*transition: .5s;
+	transition: top .5s;*/
+	/*transition-property: top, bottom, transform;*/
+    transition: 0.2s;
+}
+input.showhide:not(:checked) +div.formhide:hover{
+	/*left: 10px;
+	margin-top: -10px;
+	margin-bottom: 15px;*/
+	transform: translate( 0, -10px );
+	-ms-transform: translate( 0, -10px );
+}
+
+input.showhide{
+	appearance:none;
+	z-index: 0;
+  left:-100%;
+  top:-100%;
+  
+  position:absolute;
+}
+input.showhide:checked ~div.formhide{
+z-index: 100;
+	/*position: absolute;*/
+}
+input.showhide:checked ~div.formhide{
+	opacity: 1;
+	/*position: absolute;*/
+}
+
+input.showhide:checked ~label>h2{
+/*background-color: #EEE;*/
+
+	background-color: #EEE;
+	background: linear-gradient( to left, #EEE, rgba(238,238,238,0));
+	/*box-shadow: 0px 0px 5px 4px rgba(10,10,27,.25);*/
+	/*border-right: none;*/
+	
+	/*z-index: 2000;*/
+	/*position: absolute;*/
+}
+input.showhide:not(:checked)~label>h2:hover{
+	background-color: #AAE;
+	background: linear-gradient( to left, #AAE, rgba(170,170,238,0));
+	padding-right: 20px;
+	width: 190px;
+	/*position: absolute;*/
+}
+
+
+input.showhide:checked ~div.frogbox{
+	padding-top: 40px;
+}
+
+div.frogbox{
+	position: relative;
+	width: calc( 100% + 20px );
+	left: -20px;
+	
+}
+div.frogboxfront{
+	bottom: 0px;
+	position: absolute;
+	bottom: 10px;
+	height: 230px;
+	width: 100%;
+	background-color: rgb( 171, 118, 39 );
+}
+
+
+div.page{
+	position: absolute;
+	display: block;
+	width: 100%;
+	/*background: #EEE;*/
+	padding: 10px;
+	/*border: 2px solid #557;*/
+	/*border-radius: 4px;*/
+	color: #222;
+	/*box-shadow: 0px 0px 5px 4px rgba(10,10,27,.25);*/
+	transition: .2s;
+}
+
+div.element{
+	position: relative;
+	margin: 3px;
+	margin-bottom: 5px;
+	line-height: 22px;
+	height: 22px;
+}
+
+div.left{
+	display: inline-block;
+	float: left;
+}
+div.right{
+	
+	position: absolute;
+	display: inline-block;
+	right: 10px;
+}
+form.left{
+	/*left: 0;*/
+}
+form.right{
+	/*right: 0;*/
+}
+
+input.fill{
+	position: absolute;
+	width: 300px;
+	right: 0px;
+}
+
+select.fill{
+	position: absolute;
+	right: 0px;
+	width: 300px;
+}
+select.fill2{
+	position: absolute;
+	right: 0px;
+	width: 300px;
+}
+
+input[type=text] {
+	width: 300px;
+}
+
+div.pad{
+	display: inline-block;
+	visibility: hidden;
+}
+
+div.front{
+	position: absolute;
+	background-color: #EEE;
+	left: 0;
+	top: 0;
+	height: 50%;
+	width: 3px;
+}
+
+
+h1{
+	margin: 2px;
+	margin-bottom: 10px;
+	color: #111;
+	text-align:center;
+	font-weight: normal;
+}
+
+h2{
+	cursor: default;
+	padding-right: 11px;
+	transition: 0.2s;
+	position: relative;
+	display: block;
+	left: -210px;
+	width: 201px;
+	top: 14px;
+
+	height: 20px;
+	margin: 0px;
+	color: #111;
+	/*background-color: #AAA;*/
+	/*border: 2px solid #557;*/
+	font-size: 14px;
+	text-align: right;
+	font-weight: normal;
+}

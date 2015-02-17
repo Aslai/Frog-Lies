@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<title>Frog-Lies settings</title>
+		<link href="style.css" rel="stylesheet" type="text/css" media="all" />
+		<script>
+			function init(){
+				/*console.log("hi");
+				var h = document.getElementsByClassName("showhide");
+				for( var i = 0; i < h.length; ++i ){
+					var tags = document.getElementsByClassName("head");
+							tags[i].onclick = (function(j){
+								return function(event){ 
+									if( j.checked ){
+										j.checked = false; 
+										event.preventDefault();
+										return false;
+									}
+								};
+							})(h[i]);
+				}*/
+			}
+		</script>
+	</head>
+	<body onload="init();">
+		<div class="container">
+			<form>
+				<h1>Frog-Lies Settings</h1>
+				<div class="frogbox">
+				
+				<div>
+					<input type="radio" name="toggle" class="showhide" id="showhide1" checked>
+					<label for="showhide1"><h2 class="head">Interface</h2></label>
+					<div class="formhide">
+						<div class="page">
+							<div class="element"><label><input type="checkbox" name="interface_startup">Run on startup</input></label></div>
+							<div class="element"><label><input type="checkbox" name="interface_shortcut">Enable shortcuts</input></label></div>
+							<div class="element"><label><input type="checkbox" name="interface_bubble">Show bubbles</input></label></div>
+							<div class="element"><label><input type="checkbox" name="interface_sounds">Play sounds</input></label></div>
+							<div class="element"><label><input type="checkbox" name="interface_blink">Blink icon</input></label></div>
+						</div>
+					</div>
+					</input>
+				</div>
+				
+				<div>
+					<input type="radio" name="toggle" class="showhide" id="showhide2" >
+					<label for="showhide2"><h2 class="head">On Upload</h2></label>
+					<div class="formhide">
+						<div class="page">
+							<div class="element"><label><input type="checkbox" name="upload_archives">Open archives in browser</input></label></div>
+							<div class="element"><label><input type="checkbox" name="upload_images">Open images in browser</input></label></div>
+							<div class="element"><label><input type="checkbox" name="upload_audio">Open audio in browser</input></label></div>
+							<div class="element"><label><input type="checkbox" name="upload_text">Open text in browser</input></label></div>
+							<div class="element"><label><input type="checkbox" name="upload_link">Copy link to clipboard</input></label></div>
+							<div class="element"><label><input type="checkbox" name="upload_append">Automatically append extension</input></label></div>
+							<div class="element">
+								<label><input type="checkbox" name="upload_save">Save uploads to </input></label>
+								<div class="right">
+									<input type="text" name="upload_path"></input>
+									<input type="button" name="upload_browse" value="Browse"></input>
+								</div>
+							</div>
+						</div>
+					</div>
+					</input>
+				</div>
+				
+				<div>
+					<input type="radio" name="toggle" class="showhide" id="showhide3" >
+					<label for="showhide3"><h2 class="head">Selection Rectangle</h2></label>
+					<div class="formhide">
+						<div class="page">
+							<div class="element"><label><input type="checkbox" name="select_visible">Visible</input></label></div>
+							<div class="element"><label><input type="checkbox" name="select_dimension">Show dimensions</input></label></div>
+							<div class="element"><div class="pad"><input type="checkbox"/></div>Border Color: <input class="fill" type="text" name="select_bordercolor"></input></div>
+							<div class="element"><div class="pad"><input type="checkbox"/></div>Border Opacity: <input class="fill" type="text" name="select_borderopacity"></input></div>
+							<div class="element"><div class="pad"><input type="checkbox"/></div>Fill Color: <input class="fill" type="text" name="select_fillcolor"></input></div>
+							<div class="element"><div class="pad"><input type="checkbox"/></div>Fill Opacity: <input class="fill" type="text" name="select_fillopacity"></input></div>
+						</div>
+					</div>
+					</input>
+				</div>
+				
+				<div>
+					<input type="radio" name="toggle" class="showhide" id="showhide4" >
+					<label for="showhide4"><h2 class="head">Capture Behavior</h2></label>
+					<div class="formhide">
+						<div class="page">
+							<div class="element">Windows:
+									<select name="capture_windows" class="fill">
+										<option value="capture_windows_entire" selected>Capture entire window</option>
+										<option value="capture_windows_inner">Capture inner window</option>
+									</select>
+								</div>
+							<div class="element">Full Screen:
+									<select name="capture_screen" class="fill">
+										<option value="capture_screen_all" selected>Capture all monitors</option>
+										<option value="capture_screen_primary">Capture only primary monitor</option>
+										<option value="capture_screen_mouse">Capture monitor mouse is in</option>
+									</select>
+								</div>
+							<div class="element">Files:
+									<select name="capture_files" class="fill">
+										<option value="capture_files_archasis" selected>Archive multiple files; upload single files as-is</option>
+										<option value="capture_files_archev">Archive everything before uploading</option>
+										<option value="capture_files_archnotimage">Archive everything but images</option>
+										<option value="capture_files_onlyfirst">Don't archive anything; upload only first file</option>
+										<option value="capture_files_allnoarch">Don't archive anything; upload all files</option>
+									</select>
+								</div>
+						</div>
+					</div>
+					</input>
+				</div>
+				
+				<div>
+					<input type="radio" name="toggle" class="showhide" id="showhide5" >
+					<label for="showhide5"><h2 class="head">Tray Icon Behavior</h2></label>
+					<div class="formhide">
+						<div class="page">
+							<div class="element">Left Click:
+									<select name="tray_left" class="fill">
+										<option value="tray_nothing" selected>Nothing</option>
+										<option value="tray_settings">Open Settings</option>
+										<option value="tray_menu">Open Menu</option>
+										<option value="tray_window">Upload Window</option>
+										<option value="tray_screen">Upload Screen</option>
+										<option value="tray_crop">Begin Crop</option>
+										<option value="tray_clip">Upload Clipboard</option>
+										<option value="tray_audio">Upload Audio</option>
+										<option value="tray_gif">Begin Recording GIF</option>
+										<option value="tray_copylast">Copy Last Upload to Clipboard</option>
+										<option value="tray_openlast">Open Last Upload in Browser</option>
+									</select>
+								</div>
+							<div class="element">Right Click:
+									<select name="tray_right" class="fill">
+										<option value="tray_nothing" selected>Nothing</option>
+										<option value="tray_settings">Open Settings</option>
+										<option value="tray_menu">Open Menu</option>
+										<option value="tray_window">Upload Window</option>
+										<option value="tray_screen">Upload Screen</option>
+										<option value="tray_crop">Begin Crop</option>
+										<option value="tray_clip">Upload Clipboard</option>
+										<option value="tray_audio">Upload Audio</option>
+										<option value="tray_gif">Begin Recording GIF</option>
+										<option value="tray_copylast">Copy Last Upload to Clipboard</option>
+										<option value="tray_openlast">Open Last Upload in Browser</option>
+									</select>
+								</div>
+							<div class="element">Middle Click:
+									<select name="tray_middle" class="fill">
+										<option value="tray_nothing" selected>Nothing</option>
+										<option value="tray_settings">Open Settings</option>
+										<option value="tray_menu">Open Menu</option>
+										<option value="tray_window">Upload Window</option>
+										<option value="tray_screen">Upload Screen</option>
+										<option value="tray_crop">Begin Crop</option>
+										<option value="tray_clip">Upload Clipboard</option>
+										<option value="tray_audio">Upload Audio</option>
+										<option value="tray_gif">Begin Recording GIF</option>
+										<option value="tray_copylast">Copy Last Upload to Clipboard</option>
+										<option value="tray_openlast">Open Last Upload in Browser</option>
+									</select>
+								</div>
+							<div class="element">Double Click:
+									<select name="tray_double" class="fill">
+										<option value="tray_nothing" selected>Nothing</option>
+										<option value="tray_settings">Open Settings</option>
+										<option value="tray_menu">Open Menu</option>
+										<option value="tray_window">Upload Window</option>
+										<option value="tray_screen">Upload Screen</option>
+										<option value="tray_crop">Begin Crop</option>
+										<option value="tray_clip">Upload Clipboard</option>
+										<option value="tray_audio">Upload Audio</option>
+										<option value="tray_gif">Begin Recording GIF</option>
+										<option value="tray_copylast">Copy Last Upload to Clipboard</option>
+										<option value="tray_openlast">Open Last Upload in Browser</option>
+									</select>
+								</div>
+								
+						</div>
+					</div>
+					</input>
+				</div>
+				
+				<div>
+					<input type="radio" name="toggle" class="showhide" id="showhide6">
+					<label for="showhide6"><h2 class="head">Formats</h2></label>
+					<div class="formhide">
+						<div class="page">
+							<div class="element">Archives:
+									<select name="formats_archives" class="fill2">
+										<option value="formats_zip" selected>Zip</option>
+										<option value="formats_7zip">7Zip</option>
+										<option value="formats_tar">Tar</option>
+										<option value="formats_tarbz">Tar/BZip2</option>
+										<option value="formats_targz">Tar/GZip</option>
+									</select></div>
+							<div class="element">Images:
+									<select name="formats_images" class="fill2">
+										<option value="formats_png" selected>PNG</option>
+										<option value="formats_jpeg">Jpeg</option>
+										<option value="formats_bmp">BMP</option>
+										<option value="formats_gif">GIF</option>
+										<option value="formats_smart">Smart</option>
+									</select></div>
+							<div class="element">Sound:
+									<select name="formats_sounds" class="fill2">
+										<option value="formats_wav" selected>WAV</option>
+										<option value="formats_flac">FLAC</option>
+										<option value="formats_vorbis">OGG/Vorbis</option>
+										<option value="formats_opus">OGG/Opus</option>
+									</select></div>
+							<div class="element">Image Quality: <input class="fill" type="text" name="formats_imagequality"></input></div>
+							<div class="element">Audio Quality: <input class="fill" type="text" name="formats_soundquality"></input></div>
+						</div>
+					</div>
+					</input>
+				</div>
+				
+				<div>
+					<input type="radio" name="toggle" class="showhide" id="showhide7" >
+					<label for="showhide7"><h2 class="head">Sounds</h2></label>
+					<div class="formhide">
+						<div class="page">
+							<div class="element">Startup: 
+								<div class="right">
+									<input type="text" name="sounds_startup"></input>
+									<input type="button" value="Browse" name="sounds_browse_startup"></input>
+									<input type="button" value="Use Resource" name="sounds_resource_startup"></input>
+								</div>
+							</div>
+							<div class="element">Begin Upload:
+								<div class="right">
+									<input type="text" name="sounds_begin"></input>
+									<input type="button" value="Browse" name="sounds_browse_begin"></input>
+									<input type="button" value="Use Resource" name="sounds_resource_begin"></input>
+								</div>
+							</div>
+							<div class="element">Finish Upload: 
+								<div class="right">
+									<input type="text" name="sounds_finish"></input>
+									<input type="button" value="Browse" name="sounds_browse_finish"></input>
+									<input type="button" value="Use Resource" name="sounds_resource_finish"></input>
+								</div>
+							</div>
+							<div class="element">Error: 
+								<div class="right">
+									<input type="text" name="sounds_error"></input>
+									<input type="button" value="Browse" name="sounds_browse_error"></input>
+									<input type="button" value="Use Resource" name="sounds_resource_error"></input>
+								</div>
+							</div>
+						</div>
+					</div>
+					</input>
+				</div>
+				
+				<div>
+					<input type="radio" name="toggle" class="showhide" id="showhide8" >
+					<label for="showhide8"><h2 class="head">User Info</h2></label>
+					<div class="formhide">
+						<div class="page">
+							<div class="element">Service:
+									<select name="user_service" class="fill2">
+										<option value="user_service_frogbox" selected>i.frogbox.es</option>
+										<option value="user_service_imgur">imgur</option>
+										<option value="user_service_puush">puush</option>
+									</select></div>
+							<div class="element">Username: <input type="text" name="user_name" class="fill"></input></div>
+							<div class="element">Password: <input type="text" name="user_password" class="fill"></input></div>
+						</div>
+					</div>
+					</input>
+				</div>
+				
+				<div>
+					<input type="radio" name="toggle" class="showhide" id="showhide9" >
+					<label for="showhide9"><h2 class="head">Shortcuts</h2></label>
+					<div class="formhide">
+						<div class="page">
+							<div class="element">Capture Window: 
+								<div class="right">
+									<input type="text" name="shortcut_window"></input>
+									<input type="button" value="Set..." name="shortcut_window_button"></input>
+								</div>
+							</div>
+							
+							<div class="element">Capture Screen: 
+								<div class="right">
+									<input type="text" name="shortcut_screen"></input>
+									<input type="button" value="Set..." name="shortcut_screen_button"></input>
+								</div>
+							</div>
+							
+							<div class="element">Capture Selection: 
+								<div class="right">
+									<input type="text" name="shortcut_selection"></input>
+									<input type="button" value="Set..." name="shortcut_selection_button"></input>
+								</div>
+							</div>
+							
+							<div class="element">Capture Clipboard: 
+								<div class="right">
+									<input type="text" name="shortcut_clipboard"></input>
+									<input type="button" value="Set..." name="shortcut_clipboard_button"></input>
+								</div>
+							</div>
+							
+							<div class="element">Quit Frog-Lies: 
+								<div class="right">
+									<input type="text" name="shortcut_quit"></input>
+									<input type="button" value="Set..." name="shortcut_quit_button"></input>
+								</div>
+							</div>
+							
+							<div class="element">Toggle Functionality: 
+								<div class="right">
+									<input type="text" name="shortcut_toggle"></input>
+									<input type="button" value="Set..." name="shortcut_toggle_button"></input>
+								</div>
+							</div>
+							
+
+						</div>
+					</div>
+					</input>
+				</div>
+				<noscript>
+					<div>
+						<input type="radio" name="toggle" class="showhide" id="showhide10" >
+						<label for="showhide10"><h2 class="head">Commit Changes</h2>
+						<div class="formhide">
+							<div class="page">
+								<input type="button" value="Commit Changes" name="commit"></input>
+							</div>
+						</div>
+					</div>
+				</noscript>
+				</div>
+				<div class="front"></div>
+			</form>
+		</div>
+		
+	</body>
+</html>

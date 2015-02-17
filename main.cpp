@@ -34,7 +34,7 @@
 #include "files.h"
 #include "whff.h"
 #include "bitmap.h"
-#include "luawrap.h"
+#include "Lua/Lua.hpp"
 #include "froglies.h"
 #include "mutex.h"
 
@@ -85,6 +85,8 @@ namespace FrogLies {
     std::string zipformatext = "zip";
     std::string ownerName = "";
 
+    int flashIcon = 0;
+
 
     char clickDrag;     //States are NOTNOW, WAITING, DRAGGING.
     POINT dragStart;
@@ -98,10 +100,20 @@ namespace FrogLies {
 
     BYTE color;
 
-    int trans = 0;
-    bool olddrag = false;
+    int color_r = 0;
+    int color_g = 0;
+    int color_b = 255;
+    int color_a = 100;
 
-    char* copyLoc;
+    int loglevel = 0;
+    FILE*logfile = nullptr;
+
+    bool appendExtension;
+
+    int trans = 0;
+    int olddrag = 0;
+
+    std::string copyLoc;
 
     int doquit = 0;
 
@@ -128,6 +140,13 @@ namespace FrogLies {
     LRESULT CALLBACK handlemouse( int code, WPARAM wp, LPARAM lp );
 
     std::string Timestamp(std::string type="ss");
+
+    void Log( std::string message, int level = 1 ){
+        if( loglevel >= level && logfile != nullptr ){
+            fprintf(logfile, "%u: %s\n", (unsigned)time(NULL), message.c_str() );
+            fflush( logfile );
+        }
+    }
 
     //From https://stackoverflow.com/questions/12554237/hiding-command-prompt-called-by-system
     int system_hidden(const char *cmdArgs)
@@ -355,7 +374,7 @@ namespace FrogLies {
         }
         if( keyspressed[key] == 3 ) {
             keyspressed[key] = 0;
-            return 2;
+            return 0;
         }
 
         return keyspressed[key];
@@ -398,23 +417,82 @@ namespace FrogLies {
         std::string ToReturn( str );
         return ToReturn;
     }
+ void ShowDragWindow( char state, int startx, int starty, int width, int height ){
+        switch(olddrag){
+            case 2:
+            case 1:{
+                if( state == DRAGGING ){
+                     SetWindowPos( hwndmous, HWND_TOPMOST, startx, starty, width, height, 0 );
+                    if( state != NOTNOW ) {
+                        SetLayeredWindowAttributes( hwndmous, RGB( 255, 255, 255 ), color_a, LWA_ALPHA );
+                    }
+                }
+                else{
+                    SetLayeredWindowAttributes( hwndmous, RGB( 255, 255, 255 ), 1, LWA_ALPHA );
+                    POINT p;
+                    if (GetCursorPos(&p)){
+                        SetWindowPos( hwndmous, HWND_TOPMOST, p.x - 16, p.y - 16, 32, 32, 0 );
+                    }
+                }
+            }
+            if( olddrag == 1 ){
+                break;
+            }
+            case 0:
+            {
+                if( state != DRAGGING ){
+                    POINT p;
+                    if (GetCursorPos(&p)){
+                        SetLayeredWindowAttributes( hwndmous, RGB( 255, 255, 255 ), 1, LWA_ALPHA );
+                        SetWindowPos( hwndmous, HWND_TOPMOST, p.x - 16, p.y - 16, 32, 32, 0 );
+                        printf("%d %d\n", p.x, p.y);
+                    }
+                }
+                UpdateWindow(hwndmous);
+                if( state == DRAGGING) {
+                    ShowWindow( hwnd, SW_SHOW );
+                    ShowWindow( hwndtext, SW_SHOW );
+                    SetLayeredWindowAttributes( hwnd, RGB(255,255,255), 255, LWA_COLORKEY );
+                    SetLayeredWindowAttributes( hwndtext, RGB(255,255,254), 255, LWA_COLORKEY );
+                    //printf("THERE!");
+                    RedrawWindow(hwndtext, NULL, NULL, RDW_INVALIDATE);
+                    RedrawWindow(hwnd, NULL, NULL, RDW_INVALIDATE);
+                }
+            }break;
+        }
+    }
+
+    void HideDragWindow(){
+        switch(olddrag){
+            case 2:
+            case 1:
+            {
+                SetLayeredWindowAttributes( hwndmous, RGB( 255, 255, 255 ), 0, LWA_ALPHA );
+            }
+            if( olddrag == 1 ){
+                break;
+            }
+            case 0:
+            {
+                ShowWindow( hwnd, SW_HIDE );
+                ShowWindow( hwndtext, SW_HIDE );
+            }break;
+        }
+    }
+
 
     void startCrop(){
         printf("STARTING!");
         clickDrag = WAITING;
         mouhook = SetWindowsHookEx( WH_MOUSE_LL, ( HOOKPROC )handlemouse, GetModuleHandle( NULL ), 0 );
 
-        if (olddrag){
-            MyCursor = dragCursor;
-            SetCursor( dragCursor );
-            SetLayeredWindowAttributes( hwndmous, RGB( 255, 255, 255 ), 1, LWA_ALPHA );
-            ShowWindow( hwndmous, SW_SHOW );
-        }
-        else{
-            ShowWindow( hwndmous, SW_SHOW );
-            SetLayeredWindowAttributes( hwndmous, RGB(255,255,255), 1, LWA_ALPHA );
-            dragEnd.x = dragEnd.y = dragStart.x = dragStart.y = coords.x = coords.y = 0;
-        }
+        ShowDragWindow( clickDrag, 0, 0, 0, 0 );
+        MyCursor = dragCursor;
+        SetCursor( dragCursor );
+        ShowWindow( hwndmous, SW_SHOW );
+        SetLayeredWindowAttributes( hwndmous, RGB(255,255,255), 1, LWA_ALPHA );
+        dragEnd.x = dragEnd.y = dragStart.x = dragStart.y = coords.x = coords.y = 0;
+
     }
     void endCrop(){
         printf("ENDING!");
@@ -422,160 +500,91 @@ namespace FrogLies {
         UnhookWindowsHookEx( mouhook );
         mouhook = NULL;
 
-        if (olddrag){
-            MyCursor = dfltCursor;
-            SetCursor( dfltCursor );
-            ShowWindow( hwndmous, SW_HIDE );
-        }
-        else{
-            ShowWindow( hwnd, SW_HIDE );
-            ShowWindow( hwndmous, SW_HIDE );
-            ShowWindow( hwndtext, SW_HIDE );
-        }
+        MyCursor = dfltCursor;
+        SetCursor( dfltCursor );
+        ShowWindow( hwndmous, SW_HIDE );
+        ShowWindow( hwnd, SW_HIDE );
+        ShowWindow( hwndtext, SW_HIDE );
     }
 
-    LRESULT CALLBACK handlemouse( int code, WPARAM wp, LPARAM lp ) {
 
+
+    LRESULT CALLBACK handlemouse( int code, WPARAM wp, LPARAM lp ) {
         if ( clickDrag ) {
             if ( ( wp == WM_LBUTTONDOWN || wp == WM_LBUTTONUP || wp == WM_MOUSEMOVE ) ) {
                 MSLLHOOKSTRUCT st_hook = *( ( MSLLHOOKSTRUCT* )lp );
 
-                if (olddrag){
-                    dragEnd = st_hook.pt;
+                coords = dragEnd; //used as a storage value for 'if (keyspressed["Ctrl"])'
 
-                    if ( clickDrag == WAITING ) {
-                        coords = dragEnd;
-                    } else {
-                        coords.x = dragEnd.x - dragStart.x;
-                        coords.y = dragEnd.y - dragStart.y;
+                dragEnd = st_hook.pt;
+
+                if ( clickDrag == WAITING ) {
+                    coords = dragEnd;
+                } else {
+                    if (ReadKey("Ctrl") && dragStart.x - dragEnd.x != 0 && dragStart.y - dragEnd.y != 0){
+                        dragStart.x -= coords.x - dragEnd.x;
+                        dragStart.y -= coords.y - dragEnd.y;
                     }
+                    if (ReadKey("Shift")){      // Will also need a message that calls this method when shift is pressed.
+                        //printf("SHIFT!!!");
 
-                    int x, y, w, h;
-                    x = dragStart.x < dragEnd.x ? dragStart.x : dragEnd.x;
-                    y = dragStart.y < dragEnd.y ? dragStart.y : dragEnd.y;
-                    w = dragStart.x - dragEnd.x;
-                    h = dragStart.y - dragEnd.y;
-                    if( w < 0 ) { w = -w; }
-                    if( h < 0 ) { h = -h; }
+                        int w, h;
 
-                    if( clickDrag != DRAGGING ) {
-                        SetLayeredWindowAttributes( hwndmous, RGB( 255, 255, 255 ), 1, LWA_ALPHA );
-                        SetWindowPos( hwndmous, HWND_TOPMOST, dragEnd.x - 100, dragEnd.y - 100, 200, 200, 0 );
-                    } else {
-                        SetWindowPos( hwndmous, HWND_TOPMOST, x, y, w, h, 0 );
-                        if( clickDrag != NOTNOW ) {
-                            SetLayeredWindowAttributes( hwndmous, RGB( 255, 255, 255 ), 100, LWA_ALPHA );
+                        w = dragStart.x - dragEnd.x;
+                        h = dragStart.y - dragEnd.y;
+
+                        if( w < 0 ) { w = -w; }
+                        if( h < 0 ) { h = -h; }
+
+                        if (w < h){
+                            if (dragStart.y - dragEnd.y < 0){
+                                dragEnd.y = dragStart.y + w;
+                            }
+                            else{
+                                dragEnd.y = dragStart.y - w;
+                            }
                         }
-                    }
-
-                    //printf("State: %i \t MPos: [%i, %i] \t Coord: [%i, %i]\n", clickDrag, dragEnd.x - GetSystemMetrics( SM_XVIRTUALSCREEN ), dragEnd.y - GetSystemMetrics( SM_YVIRTUALSCREEN ), coords.x, coords.y);
-
-                    //printf("HANDMOUS- wp: 0x%X \t md: 0x%X \t fl: 0x%X\n", wp, st_hook.mouseData, st_hook.flags);
-
-                    if ( wp == WM_LBUTTONDOWN ) {
-                        dragStart = dragEnd;
-                        clickDrag = DRAGGING;
-                        printf( "DOWN!\n" );
-                    }
-                    if ( wp == WM_LBUTTONUP ) {
-                        SetLayeredWindowAttributes( hwndmous, RGB( 255, 255, 255 ), 0, LWA_ALPHA );
-                        printf( "\n\n\n\n\n%d\n\n\n\n\n\n", GetSystemMetrics( SM_XVIRTUALSCREEN ) );
-                        DoUpload( UPLOAD_CROP, dragStart.x - GetSystemMetrics( SM_XVIRTUALSCREEN ), dragStart.y - GetSystemMetrics( SM_YVIRTUALSCREEN ), coords.x, coords.y );
-                        /*
-                        Bitmap mb = GetWindow( GetDesktopWindow() );
-                        mb.Crop( dragStart.x, dragStart.y, coords.x, coords.y );
-                        void* data = mb.ReadPNG();
-                        if( data != 0 ) {
-                                Upload( "png", data, mb.PNGLen() );
+                        else{
+                            if (dragStart.x - dragEnd.x < 0){
+                                dragEnd.x = dragStart.x + h;
                             }
-                            */
-
-                        //clickDrag = NOTNOW;
-                        printf( "UP!\n" );
-
-                        endCrop();
-                    }
-                }
-                else{
-                    coords = dragEnd; //used as a storage value for 'if (keyspressed["Ctrl"])'
-
-                    dragEnd = st_hook.pt;
-
-                        SetWindowPos( hwndmous, HWND_TOPMOST, dragEnd.x - 200, dragEnd.y - 200, 400, 400, 0 );
-                        UpdateWindow(hwndmous);
-
-                        if ( clickDrag == WAITING ) {
-                            coords = dragEnd;
-                        } else {
-                            if (keyspressed["Ctrl"] && dragStart.x - dragEnd.x != 0 && dragStart.y - dragEnd.y != 0){
-                                dragStart.x -= coords.x - dragEnd.x;
-                                dragStart.y -= coords.y - dragEnd.y;
+                            else{
+                                dragEnd.x = dragStart.x - h;
                             }
-                            if (keyspressed["Shift"]){      // Will also need a message that calls this method when shift is pressed.
-                                //printf("SHIFT!!!");
-
-                                int w, h;
-
-                                w = dragStart.x - dragEnd.x;
-                                h = dragStart.y - dragEnd.y;
-
-                                if( w < 0 ) { w = -w; }
-                                if( h < 0 ) { h = -h; }
-
-                                if (w < h){
-                                    if (dragStart.y - dragEnd.y < 0){
-                                        dragEnd.y = dragStart.y + w;
-                                    }
-                                    else{
-                                        dragEnd.y = dragStart.y - w;
-                                    }
-                                }
-                                else{
-                                    if (dragStart.x - dragEnd.x < 0){
-                                        dragEnd.x = dragStart.x + h;
-                                    }
-                                    else{
-                                        dragEnd.x = dragStart.x - h;
-                                    }
-                                }
-
-                            }
-                            coords.x = dragEnd.x - dragStart.x;
-                            coords.y = dragEnd.y - dragStart.y;
                         }
 
-                    if ( wp == WM_LBUTTONDOWN ) {
-                        dragStart = dragEnd;
-
-                        coords.x = dragEnd.x - dragStart.x;
-                        coords.y = dragEnd.y - dragStart.y;
-
-                        clickDrag = DRAGGING;
-
-                        printf( "DOWN!\n" );
-
-                        ShowWindow( hwnd, SW_SHOW );
-                        ShowWindow( hwndtext, SW_SHOW );
-
-                        SetLayeredWindowAttributes( hwnd, RGB(255,255,255), 255, LWA_COLORKEY );
-                        SetLayeredWindowAttributes( hwndtext, RGB(255,255,254), 255, LWA_COLORKEY );
                     }
-                    if ( wp == WM_LBUTTONUP ) {
-                        DoUpload( UPLOAD_CROP, dragStart.x - GetSystemMetrics( SM_XVIRTUALSCREEN ), dragStart.y - GetSystemMetrics( SM_YVIRTUALSCREEN ), coords.x, coords.y );
-                        printf( "UP!\n" );
-                        endCrop();
-                        //MyCursor = dfltCursor;
-                        //SetCursor( dfltCursor );
-                    }
-
-                    if( clickDrag == DRAGGING) {
-                        //printf("THERE!");
-                        RedrawWindow(hwndtext, NULL, NULL, RDW_INVALIDATE);
-                        RedrawWindow(hwnd, NULL, NULL, RDW_INVALIDATE);
-                    }
+                    coords.x = dragEnd.x - dragStart.x;
+                    coords.y = dragEnd.y - dragStart.y;
                 }
 
-                //return -1;
+                if ( wp == WM_LBUTTONDOWN ) {
+                    dragStart = dragEnd;
+
+                    coords.x = dragEnd.x - dragStart.x;
+                    coords.y = dragEnd.y - dragStart.y;
+
+                    clickDrag = DRAGGING;
+                }
+                if ( wp == WM_LBUTTONUP ) {
+                    HideDragWindow();
+                    DoUpload( UPLOAD_CROP, dragStart.x - GetSystemMetrics( SM_XVIRTUALSCREEN ), dragStart.y - GetSystemMetrics( SM_YVIRTUALSCREEN ), coords.x, coords.y );
+                    printf( "UP!\n" );
+                    endCrop();
+                    //MyCursor = dfltCursor;
+                    //SetCursor( dfltCursor );
+                }else{
+                    int x = dragStart.x;
+                    int y = dragStart.y;
+                    if( coords.x < 0 ){
+                        x += coords.x;
+                    }
+                    if( coords.y < 0 ){
+                        y += coords.y;
+                    }
+
+                    ShowDragWindow( clickDrag, x, y, abs(coords.x), abs(coords.y) );
+                }
             }
         } else {
             return CallNextHookEx( mouhook, code, wp, lp );
@@ -595,11 +604,24 @@ namespace FrogLies {
             KBDLLHOOKSTRUCT st_hook = *( ( KBDLLHOOKSTRUCT* )lp );
             msg += ( st_hook.scanCode << 16 );
             msg += ( st_hook.flags << 24 );
+            msg += 1 << 25;
             GetKeyNameText( msg, tmp, 0xFF );
             str = std::string( tmp );
             for( unsigned int i = 0; i < str.length(); ++i ){
                 if( str[i] == ' ' )
                     str[i] = '-';
+            }
+            size_t pos = str.find("-");
+            if( pos != std::string::npos ){
+                std::string sub = str.substr(0, pos);
+                if( sub == "Left" || sub == "Right"){
+                    sub = str.substr(pos + 1);
+                    if( keyspressed[sub] == 2 ) {
+                        keyspressed[sub] = 3;
+                    } else {
+                        keyspressed[sub] = 0;
+                    }
+                }
             }
             if( keyspressed[str] == 2 ) {
                 keyspressed[str] = 3;
@@ -607,6 +629,7 @@ namespace FrogLies {
                 keyspressed[str] = 0;
             }
             printf( "%s\n", str.c_str());
+            Log( "Released " + str );
 
             //printf( "%s up\n", str.c_str() );
         } else if ( code == HC_ACTION && ( wp == WM_SYSKEYDOWN || wp == WM_KEYDOWN ) ) {
@@ -616,17 +639,31 @@ namespace FrogLies {
             KBDLLHOOKSTRUCT st_hook = *( ( KBDLLHOOKSTRUCT* )lp );
             msg += ( st_hook.scanCode << 16 );
             msg += ( st_hook.flags << 24 );
+            msg += 1 << 25;
             GetKeyNameText( msg, tmp, 0xFF );
             str = std::string( tmp );
             for( unsigned int i = 0; i < str.length(); ++i ){
                 if( str[i] == ' ' )
                     str[i] = '-';
             }
+            size_t pos = str.find("-");
+            if( pos != std::string::npos ){
+                std::string sub = str.substr(0, pos);
+                if( sub == "Left" || sub == "Right"){
+                    sub = str.substr(pos + 1);
+                    if( keyspressed[sub] == 0 ) {
+                        keyspressed[sub] = 2;
+                    } else {
+                        keyspressed[sub] = 1;
+                    }
+                }
+            }
             if( keyspressed[str] == 0 ) {
                 keyspressed[str] = 2;
             } else {
                 keyspressed[str] = 1;
             }
+            Log( "Pressed " + str );
 
             //printf( "%s down\n", str.c_str() );
         }
@@ -684,7 +721,7 @@ namespace FrogLies {
                     FillRgn(hdc, bgRgn, hBrush);
 
                     //hPen = CreatePen(PS_SOLID,3,color);
-                    hPen = CreatePen(PS_SOLID,3,RGB(48,98,48));
+                    hPen = CreatePen(PS_SOLID,3,RGB(color_r,color_g,color_b));
                     SelectObject(hdc, hPen);
                     SetBkColor(hdc, RGB(1,0,0));
                     Rectangle(hdc, rect.left, rect.top, rect.right, rect.bottom);
@@ -694,11 +731,10 @@ namespace FrogLies {
 
                     TextOut(hdc, rect.left + 50 - ((strlen(str)-1)*7)*.5, rect.top + 2, str, strlen(str));
 
+                    SelectObject(hdc, GetStockObject(DC_PEN) );
+
                     DeleteObject(hBrush);
                     DeleteObject(hPen);
-
-                    GetStockObject(WHITE_BRUSH);
-                    GetStockObject(DC_PEN);
 
                     EndPaint(hwnd, &ps);
                 }
@@ -820,16 +856,16 @@ UPLOADCROP:
                     FillRgn(hdc, bgRgn, hBrush);
 
                     //hPen = CreatePen(PS_SOLID,3,color);
-                    hPen = CreatePen(PS_SOLID,3,RGB(48,98,48));
+                    hPen = CreatePen(PS_SOLID,3,RGB(color_r,color_g,color_b));
                     SelectObject(hdc, hPen);
                     SetBkColor(hdc, RGB(1,0,0));
                     Rectangle(hdc, rect.left, rect.top, rect.right, rect.bottom);
 
+                    SelectObject(hdc, GetStockObject(DC_PEN) );
+
                     DeleteObject(hBrush);
                     DeleteObject(hPen);
 
-                    GetStockObject(WHITE_BRUSH);
-                    GetStockObject(DC_PEN);
 
                     EndPaint(hwnd, &ps);
                 }
@@ -883,6 +919,7 @@ UPLOADCROP:
                                 break;
                             case MENU_SS_CROP:
                                 clickDrag = WAITING;
+                                ShowDragWindow( clickDrag, 0, 0, 0, 0 );
                                 mouhook = SetWindowsHookEx( WH_MOUSE_LL, ( HOOKPROC )handlemouse, GetModuleHandle( NULL ), 0 );
                                 MyCursor = dragCursor;
                                 SetCursor( dragCursor );
@@ -935,6 +972,7 @@ UPLOADCROP:
     }
 
     void sayString( std::string str, std::string title ) {
+        Log( "Start Say String" );
         if ( bubble ) {
             nid.cbSize = NOTIFYICONDATA_V2_SIZE;
 
@@ -949,9 +987,11 @@ UPLOADCROP:
             nid.dwInfoFlags = NIF_INFO;
             Shell_NotifyIcon( NIM_MODIFY, &nid );
         }
+        Log( "Finish Say String" );
     }
 
     void Upload( std::string type, const void* data, size_t datalen, std::string prefix ) {
+        Log( "Start Upload A" );
         std::string str = Timestamp(prefix) + "." + type;
 
         //printf("%s", str.c_str());
@@ -960,42 +1000,56 @@ UPLOADCROP:
         whff.Upload( str, data, datalen, GetMimeFromExt( type ) );
         #endif
 
-        if ( copyLoc ) {    //empty quotes to not copy...
-            mkdir( copyLoc );
+        if ( copyLoc.length() > 0 ) {    //empty quotes to not copy...
+            Log( "Copying..." );
+            mkdir( copyLoc.c_str() );
 
-            char str2[256];
-            snprintf( str2, 256, "%s%s", copyLoc, str.c_str() );
+            char str2[1000];
+            snprintf( str2, 999, "%s%s", copyLoc.c_str(), str.c_str() );
             printf( "\n\nSAVING AS: '%s'\n\n", str2 );
 
             FILE* f = fopen( str2, "wb" );
+            Log( "Saving..." );
 
             if ( !f ) { printf( "WARNING: Copy could not be saved because the directory could not be found!\n\n" ); }
             else { fwrite( data, datalen, 1, f ); }
 
             fclose( f );
+            Log( "Saved." );
             //system("pause");
         }
 
 
+        Log( "Setting Clipboard" );
         #ifndef DEBUGGING
-        SetClipboard( whff.GetLastUpload() );
+        if( appendExtension ){
+            SetClipboard( whff.GetLastUpload() + "." + type );
+        }
+        else{
+            SetClipboard( whff.GetLastUpload() );
+        }
         #endif
 
         sayString( Timestamp(prefix) + "." + type + " has been uploaded...", "Screenshot Taken" );
+        Log( "Playing Sound" );
         PlaySound( MAKEINTRESOURCE( 3 ), GetModuleHandle( NULL ), SND_ASYNC | SND_RESOURCE );
+        Log( "Finished Uploading B" );
     }
     void Upload( std::string fname ) {
 
         //printf("%s", str.c_str());
+        Log( "Start Upload B" );
 
         whff.Upload( fname );
 
-        if ( copyLoc ) {    //empty quotes to not copy...
-            mkdir( copyLoc );
+        if ( copyLoc.length() > 0 ) {    //empty quotes to not copy...
+            Log( "Copying..." );
+            mkdir( copyLoc.c_str() );
 
-            char str2[256];
-            snprintf( str2, 256, "%s%s", copyLoc, basename( fname ).c_str() );
+            char str2[1000];
+            snprintf( str2, 999, "%s%s", copyLoc.c_str(), basename( fname ).c_str() );
             printf( "\n\nSAVING AS: '%s'\n\n", str2 );
+            Log( "Saving..." );
             CopyFile( fname.c_str(), str2, 1 );
 
             /*FILE* f = fopen(str2, "wb");
@@ -1006,41 +1060,61 @@ UPLOADCROP:
             fclose(f);*/
             //system("pause");
         }
+        Log( "Setting Clipboard" );
+        size_t dotPos = fname.find_last_of('.');
+        if( appendExtension && dotPos != std::string::npos ){
 
-        SetClipboard( whff.GetLastUpload() );
+            SetClipboard( whff.GetLastUpload() + fname.substr( dotPos ) );
+        }
+        else{
+            SetClipboard( whff.GetLastUpload() );
+        }
         sayString( fname + " has been uploaded...", "Screenshot Taken" );
+        Log( "Playing Sound" );
         PlaySound( MAKEINTRESOURCE( 3 ), GetModuleHandle( NULL ), SND_ASYNC | SND_RESOURCE );
+        Log( "Finished Uploading B" );
     }
 
     void CheckKeys() {
         if( ShortcutDesk.IsHit() ) {
+            Log( "Uploading Screen" );
             DoUpload( UPLOAD_SCREEN );
         }
 
         if ( ShortcutWin.IsHit() ) {
+            Log( "Uploading Window" );
             DoUpload( UPLOAD_WINDOW );
         }
 
         if ( ShortcutCrop.IsHit() ) {
+            Log( "Start Crop" );
             startCrop();
         }
         if ( ShortcutStop.IsHit() && DRAGGING ) {
+            Log( "End Crop" );
             endCrop();
         }
         if ( ShortcutClip.IsHit() ) {
+            Log( "Uploading Clipboard" );
             DoUpload( UPLOAD_CLIP );
         }
         if ( ShortcutQuit.IsHit() ) {
-            if( doquit > 0 )
+            Log( "Quitting" );
+            if( doquit > 0 ){
                 PostMessage( hwnd, WM_CLOSE, 0, 0 );
+                Log( "Hard Quit" );
+
+            }
             else {
                 sayString( "Frog-lies is quitting", "Quitting" );
                 doquit = 6000;
+                Log( "Soft Quit" );
             }
         }
     }
 
     void GUIThread( void* ) {
+        int tick = 0;
         while( running ) {
             if( doquit > 0 ) {
                 doquit -= 2000;
@@ -1049,14 +1123,23 @@ UPLOADCROP:
                 }
             }
 
+            ++tick;
+
             Sleep( 1000 );
             nid.uFlags = NIF_MESSAGE | NIF_ICON | NIF_TIP;
             nid.hIcon = IconA;
             Shell_NotifyIcon( NIM_MODIFY, &nid );
+            if( flashIcon ){
+            ++tick;
             Sleep( 1000 );
             nid.uFlags = NIF_MESSAGE | NIF_ICON | NIF_TIP;
             nid.hIcon = IconB;
             Shell_NotifyIcon( NIM_MODIFY, &nid );
+            }
+            if( tick > 10 ){
+                tick = 0;
+                Log( "Heartbeat" );
+            }
         }
     }
 
@@ -1080,34 +1163,60 @@ UPLOADCROP:
         free( d );
 
         Lua L( buff.c_str(), "Configuration", 0 );
-        L.funcreg<int, Shortcut*, const char*, SetShortcut >( "shortcut" );
 
-        L.set( "TRUE", 1 );
-        L.set( "SHORTCUT_WIN",  &ShortcutWin );
-        L.set( "SHORTCUT_DESK", &ShortcutDesk );
-        L.set( "SHORTCUT_CROP", &ShortcutCrop );
-        L.set( "SHORTCUT_CLIP", &ShortcutClip );
-        L.set( "SHORTCUT_QUIT", &ShortcutQuit );
-        L.set( "SHORTCUT_STOP", &ShortcutStop );
-        L.set( "true", 1 );
-        L.set( "false", 0 );
+        //L.RegisterFunction( SetShortcut, "shortcut" );
 
-        L.run();
+        L.Set( "TRUE", 1 );
+        /*L.Set( "SHORTCUT_WIN",  &ShortcutWin );
+        L.Set( "SHORTCUT_DESK", &ShortcutDesk );
+        L.Set( "SHORTCUT_CROP", &ShortcutCrop );
+        L.Set( "SHORTCUT_CLIP", &ShortcutClip );
+        L.Set( "SHORTCUT_QUIT", &ShortcutQuit );
+        L.Set( "SHORTCUT_STOP", &ShortcutStop );*/
+        L.Set( "true", 1 );
+        L.Set( "false", 0 );
 
-        bubble = L.get<int>( "bubble" );
+        L.Run();
 
-        olddrag = L.get<int>( "dragtype" );
+        Lua::Value T = L.Get<Lua::Value>("Shortcuts");
+        ShortcutWin.Set( T["Window"].GetString() );
+        ShortcutDesk.Set( T["Desktop"].GetString() );
+        ShortcutCrop.Set( T["Crop"].GetString() );
+        ShortcutClip.Set( T["Clipboard"].GetString() );
+        ShortcutQuit.Set( T["Quit"].GetString() );
+        ShortcutStop.Set( T["Stop"].GetString() );
 
-        if( L.get<char*>("copyLoc")[0]!=0 )
-            copyLoc = L.get<char*>( "copyLoc" );
-        if( L.get<char*>("zipFormat")[0]!=0 )
-            zipformat = L.get<char*>("zipFormat");
-        if( L.get<char*>("zipFormatExtension")[0]!=0 )
-            zipformatext = L.get<char*>("zipFormatExtension");
-        if( L.get<char*>("OwnerName")[0]!=0 ){
-            ownerName = L.get<char*>("OwnerName");
+        bubble = L.Get<int>( "bubble" );
+
+        olddrag = L.Get<int>( "dragtype" );
+        loglevel = L.Get<int>( "LogLevel" );
+        flashIcon = L.Get<int>("flashIcon");
+        appendExtension = L.Get<int>("AutomaticallyAppendExtension");
+
+        Lua::Value C = L.Get<Lua::Value>("SelectionColor");
+        color_r = C[1].GetNumber();
+        color_g = C[2].GetNumber();
+        color_b = C[3].GetNumber();
+        color_a = C[4].GetNumber();
+
+        if( L.Get<char*>("copyLoc")[0]!=0 )
+            copyLoc = L.Get<std::string>( "copyLoc" );
+        if( L.Get<char*>("zipFormat")[0]!=0 )
+            zipformat = L.Get<std::string>("zipFormat");
+        if( L.Get<char*>("zipFormatExtension")[0]!=0 )
+            zipformatext = L.Get<std::string>("zipFormatExtension");
+
+
+        if( L.Get<char*>("OwnerName")[0]!=0 ){
+            ownerName = L.Get<std::string>("OwnerName");
             whff.SetOwner( ownerName );
         }
+
+        if( loglevel > 0 ){
+            logfile = fopen( "log.txt", "a" );
+            Log( "Starting up." );
+        }
+
 
 
         //printf("%s", copyLoc);
@@ -1295,12 +1404,12 @@ int WINAPI WinMain( HINSTANCE thisinstance, HINSTANCE previnstance, LPSTR cmdlin
     windowclass.lpszMenuName = NULL;
     windowclass.cbClsExtra = 0;
     windowclass.cbWndExtra = 0;
-    if (olddrag){
-        windowclass.hbrBackground =  CreateSolidBrush( RGB( 0, 0, 255 ) );
-    }
-    else{
-        windowclass.hbrBackground =  CreateSolidBrush( RGB(255,255,255) );
-    }
+    //if (olddrag){
+        windowclass.hbrBackground =  CreateSolidBrush( RGB( color_r, color_g, color_b ) );
+    //}
+    //else{
+    //    windowclass.hbrBackground =  CreateSolidBrush( RGB(255,255,255) );
+    //}
     windowclass.hCursor  = dragCursor;
     if ( !( RegisterClassEx( &windowclass ) ) ) {
         return 1;
@@ -1403,6 +1512,8 @@ int WINAPI WinMain( HINSTANCE thisinstance, HINSTANCE previnstance, LPSTR cmdlin
     }
 
     Shell_NotifyIcon( NIM_DELETE, &nid );
+
+    Log( "Quitting...." );
 
     return 0;
 }

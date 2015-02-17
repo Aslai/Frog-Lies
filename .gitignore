@@ -26,6 +26,7 @@
 *.layout
 *.zip
 
+bin/*
 ss/*
 *.txt
 *.Cache

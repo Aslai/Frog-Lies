@@ -25,50 +25,50 @@
 #include "bitmap.h"
 
 namespace FrogLies {
-    void* FillTemplate( unsigned int& bpos, const char** Template, ... ) {
+    std::vector<uint8_t> FillTemplate( const char* boundary, const char* Template, ... ) {
         va_list args;
         va_start( args, Template );
-        unsigned int bsize = 1000;
-        char* buffer = ( char* ) malloc( bsize );
-        bpos = 0;
-
-        for( int i = 0; Template[i] != 0; i += 2 ) {
-            switch( Template[i][0] ) {
-                case 'R':
-                case 'r': {
-                        unsigned int rawlen = strlen( Template[i + 1] );
-                        while( bpos + rawlen >= bsize ) {
-                            bsize *= 2;
-                            buffer = ( char* ) realloc( buffer, bsize );
-                        }
-                        bpos += sprintf( buffer + bpos, "%s", Template[i + 1] );
-                    }
-                    break;
-                case 'S':
-                case 's': {
-                        char* arg = va_arg( args, char* );
-                        unsigned int rawlen = strlen( arg );
-                        while( bpos + rawlen >= bsize ) {
-                            bsize *= 2;
-                            buffer = ( char* ) realloc( buffer, bsize );
-                        }
-                        bpos += sprintf( buffer + bpos, "%s", arg );
-                    }
-                    break;
-                case 'D':
-                case 'd': {
-                        void* arg = va_arg( args, void* );
-                        unsigned int rawlen = va_arg( args, unsigned int );
-                        while( bpos + rawlen >= bsize ) {
-                            bsize *= 2;
-                            buffer = ( char* ) realloc( buffer, bsize );
-                        }
-                        memcpy( buffer + bpos, arg, rawlen );
-                        bpos += rawlen;
-                    }
-                    break;
+        std::vector<uint8_t> buffer;
+        bool escaped = false;
+        for( int i = 0; Template[i] != 0; i += 1 ) {
+            if( Template[i] == '%' ){
+                escaped = true;
+                continue;
             }
+            if( !escaped ){
+                buffer.push_back(Template[i]);
+            }
+            else{
+                switch(Template[i]){
+                case 'B': {
+                    buffer.push_back('-');
+                    buffer.push_back('-');
+
+                    for( char* c = (char*)boundary; *c; ++c){
+                            buffer.push_back((uint8_t)*c);
+                    }
+                } break;
+                case 's':{
+                    char* arg = va_arg( args, char* );
+                    for(; *arg; ++arg){
+                            buffer.push_back((uint8_t)*arg);
+                    }
+                } break;
+                case 'v':{
+                    uint8_t* arg = va_arg( args, uint8_t* );
+                    unsigned int rawlen = va_arg( args, unsigned int );
+                    for(size_t p = 0; p < rawlen; ++p){
+                            buffer.push_back(arg[p]);
+                    }
+                } break;
+                case '%':
+                    buffer.push_back((uint8_t)'%');
+                    break;
+                }
+            }
+            escaped = false;
         }
+
         return buffer;
     }
 
@@ -118,37 +118,35 @@ namespace FrogLies {
                 name[i] = ' ';
             }
         }
-        FILE* f = fopen("out22.txt", "wb");
 
-        const char * posttemplate[] = {
-            "raw",  "-----------------------------28251299466151\r\n",
-            "raw",  "Content-Disposition: form-data; name=\"file\"; filename=\"",
-            "str",  "",
-            "raw",  "\"\r\n",
-            "raw",  "Content-Type: ",
-            "str",  "",
-            "raw",  "\r\n\r\n",
-            "dat",  "",
-            "raw",  "\r\n-----------------------------28251299466151\r\n",
-            "raw",  "Content-Disposition: form-data; name=\"password\"\r\n\r\n",
-            "dat",  "",
-            "raw",  "\r\n-----------------------------28251299466151\r\n",
-            "raw",  "Content-Disposition: form-data; name=\"owner\"\r\n\r\n",
-            "dat",  "",
-            "raw",  "\r\n-----------------------------28251299466151--\r\n",
-            0, 0
-        };
-        unsigned int length;
-        void *postobject = FillTemplate(   length, posttemplate,
+        const char *posttemplate =
+            "%B\r\n"
+            "Content-Disposition: form-data; name=\"file\"; filename=\"%s\"\r\n"
+            "Content-Type: %s\r\n"
+            "\r\n"
+            "%v\r\n"
+            "%B\r\n"
+            "Content-Disposition: form-data; name=\"password\"\r\n"
+            "\r\n"
+            "%v\r\n"
+            "%B\r\n"
+            "Content-Disposition: form-data; name=\"owner\"\r\n"
+            "\r\n"
+            "%v\r\n"
+            "%B--\r\n";
+        srand(time(0));
+        char delimiter[100] = "-----";
+        for( size_t i = 5; i < 99; ++i ){
+            delimiter[i] = '0' + (rand() % 10);
+        }
+        delimiter[99] = 0;
+
+        auto postobject = FillTemplate(    delimiter, posttemplate,
                                            name.c_str(),
                                            mimetype.c_str(),
                                            data, datalen,
                                            password.c_str(), password.length(),
-                                           Owner.c_str(), Owner.length() );
-
-        printf( "%s\n", ( char* ) postobject );
-        fwrite( postobject, length, 1, f );
-        fflush( f );
+                                           Owner.c_str(), Owner.length());
 
 #ifdef USE_CURL
         CURL *curl = curl_easy_init();
@@ -172,16 +170,15 @@ namespace FrogLies {
         curl_easy_cleanup( curl );
 #else
         HTTP http( "http://frogbox.es/whff/upload.php?raw" );
-        http.SetHeader( "Content-Type: multipart/form-data; boundary=---------------------------28251299466151" );
+        http.SetHeader( std::string("Content-Type: multipart/form-data; boundary=") + delimiter );
 
-        laststatus = http.Post( postobject, length );
+        laststatus = http.Post( &postobject[0], postobject.size() );
         size_t length2;
         char* c = ( char* )http.GetData( length2 );
 
         callback( c, length2, 1, this );
 #endif
 
-        free( postobject );
         return 1;
     }
 
@@ -189,7 +186,6 @@ namespace FrogLies {
         void* buffer;
         size_t len;
         buffer = read_file_to_buffer( fname, len );
-        printf("\n\nDATALEN %d\n\n", len);
         Upload( basename( fname ), buffer, len, GetMimeFromExt( extension( fname ) ), password );
         free( buffer );
         return 1;

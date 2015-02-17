@@ -10,6 +10,7 @@
 #include "http.h"
 
 static void sendAll( SOCKET sock, const char* buff, size_t len, int flags ) {
+    printf("%s", buff);
     size_t sent = 0;
     while( sent < len ) {
         sent += send( sock, buff + sent, len - sent, flags );

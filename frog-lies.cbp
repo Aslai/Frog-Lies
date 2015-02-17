@@ -42,6 +42,7 @@
 			<Add option="-std=c++11" />
 			<Add option="-Wall" />
 			<Add option="-DCURL_STATICLIB" />
+			<Add directory="../Frog-Lies" />
 		</Compiler>
 		<Linker>
 			<Add library="png" />
@@ -51,7 +52,19 @@
 			<Add library="ws2_32" />
 			<Add library="winmm" />
 			<Add library="gdi32" />
+			<Add directory="deps" />
 		</Linker>
+		<Unit filename="Error/Error.cpp" />
+		<Unit filename="Error/Error.hpp" />
+		<Unit filename="Lua/Lua.cpp" />
+		<Unit filename="Lua/Lua.hpp" />
+		<Unit filename="Lua/LuaFunction.cpp" />
+		<Unit filename="Lua/LuaScript.cpp" />
+		<Unit filename="Lua/LuaStack.cpp" />
+		<Unit filename="Lua/LuaTable.cpp" />
+		<Unit filename="Lua/LuaValue.cpp" />
+		<Unit filename="Strings/Strings.cpp" />
+		<Unit filename="Strings/Strings.hpp" />
 		<Unit filename="bitmap.cpp" />
 		<Unit filename="bitmap.h" />
 		<Unit filename="debug.h" />
@@ -60,7 +73,6 @@
 		<Unit filename="froglies.h" />
 		<Unit filename="http.cpp" />
 		<Unit filename="http.h" />
-		<Unit filename="luawrap.cpp" />
 		<Unit filename="luawrap.h" />
 		<Unit filename="main.cpp" />
 		<Unit filename="mutex.cpp" />
