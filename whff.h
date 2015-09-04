@@ -9,6 +9,7 @@ namespace FrogLies {
         static int HasInit;
         std::string Owner;
         std::string LastUpload;
+        std::string LastPass;
         int laststatus;
         static size_t callback( char *ptr, size_t size, size_t nmemb, void *userdata );
     public:

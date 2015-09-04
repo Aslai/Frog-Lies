@@ -61,6 +61,14 @@ namespace FrogLies {
                             buffer.push_back(arg[p]);
                     }
                 } break;
+                case 'd':{
+                    int arg = va_arg( args, int );
+                    char str[100];
+                    sprintf(str, "%d", arg);
+                    for(size_t i = 0; str[i] != 0; ++i){
+                            buffer.push_back(str[i]);
+                    }
+                } break;
                 case '%':
                     buffer.push_back((uint8_t)'%');
                     break;
@@ -87,6 +95,7 @@ namespace FrogLies {
         }
         SetOwner( owner );
         laststatus = 0;
+        LastPass = "";
     }
 
     void WHFF::SetOwner( std::string owner ) {
@@ -100,8 +109,8 @@ namespace FrogLies {
         tmp[size * nmemb] = 0;
         std::string value = tmp;
         free( tmp );
-        if( value.substr( 0, 5 ) != "Error" ) {
-            value = "http://i.frogbox.es/" + value;
+        if( value.find("Error") == std::string::npos ) {
+            value = "http://frg.li/" + value;
         }
         WHFF* self = ( WHFF* ) userdata;
         self->LastUpload = value;
@@ -118,6 +127,7 @@ namespace FrogLies {
                 name[i] = ' ';
             }
         }
+        LastPass = password;
 
         const char *posttemplate =
             "%B\r\n"
@@ -133,6 +143,10 @@ namespace FrogLies {
             "Content-Disposition: form-data; name=\"owner\"\r\n"
             "\r\n"
             "%v\r\n"
+            "%B\r\n"
+            "Content-Disposition: form-data; name=\"hidden\"\r\n"
+            "\r\n"
+            "%d\r\n"
             "%B--\r\n";
         srand(time(0));
         char delimiter[100] = "-----";
@@ -140,13 +154,16 @@ namespace FrogLies {
             delimiter[i] = '0' + (rand() % 10);
         }
         delimiter[99] = 0;
+        auto i = password.c_str();
 
         auto postobject = FillTemplate(    delimiter, posttemplate,
                                            name.c_str(),
                                            mimetype.c_str(),
                                            data, datalen,
                                            password.c_str(), password.length(),
-                                           Owner.c_str(), Owner.length());
+                                           Owner.c_str(), Owner.length(),
+                                           password == "" ? 0 : 1
+                                           );
 
 #ifdef USE_CURL
         CURL *curl = curl_easy_init();
@@ -186,6 +203,9 @@ namespace FrogLies {
         void* buffer;
         size_t len;
         buffer = read_file_to_buffer( fname, len );
+        if( buffer == 0 ){
+            return 0;
+        }
         Upload( basename( fname ), buffer, len, GetMimeFromExt( extension( fname ) ), password );
         free( buffer );
         return 1;

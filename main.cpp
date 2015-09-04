@@ -66,7 +66,8 @@ namespace FrogLies {
         UPLOAD_WINDOW,
         UPLOAD_SCREEN,
         UPLOAD_CROP,
-        UPLOAD_CLIP
+        UPLOAD_CLIP,
+        UPLOAD_FILE
     };
 
     bool running;
@@ -123,6 +124,7 @@ namespace FrogLies {
 
     struct _anupload {
         int t;
+        std::string file, show, pass;
         struct {int x, y, w, h;} d;
     };
     std::deque<_anupload> todouploads;
@@ -169,6 +171,12 @@ namespace FrogLies {
         STARTUPINFO si;
     }
 
+    std::string UploadPassword = "";
+    std::string UploadShow = "";
+    void SetParams(std::string pass, std::string show ){
+        UploadPassword = pass;
+        UploadShow = show;
+    }
     void __uploadthread( void* ) {
 
         lock.Lock();
@@ -190,12 +198,14 @@ namespace FrogLies {
                 case UPLOAD_WINDOW: {
                         Bitmap mb = GetWindow( GetForegroundWindow() );
                         void* data = mb.ReadPNG();
+                        SetParams(a.pass, a.show);
                         Upload( "png", data, mb.PNGLen() );
                     } break;
 
                 case UPLOAD_SCREEN: {
                         Bitmap mb = GetWindow( GetDesktopWindow() );
                         void* data = mb.ReadPNG();
+                        SetParams(a.pass, a.show);
                         Upload( "png", data, mb.PNGLen() );
                     } break;
 
@@ -204,8 +214,13 @@ namespace FrogLies {
                         mb.Crop( a.d.x, a.d.y, a.d.w, a.d.h );
                         void* data = mb.ReadPNG();
                         if( data != 0 ) {
+                            SetParams(a.pass, a.show);
                             Upload( "png", data, mb.PNGLen() );
                         }
+                    } break;
+                case UPLOAD_FILE: {
+                        SetParams(a.pass, a.show);
+                        Upload( a.file );
                     } break;
 
                 case UPLOAD_CLIP: {
@@ -237,6 +252,7 @@ namespace FrogLies {
                         bool ClipClosed = false;
                         switch( fmt ) {
                             case CF_TEXT:
+                                SetParams(a.pass, a.show);
                                 Upload( "txt", pchData, strlen( pchData ), "clip" );
                                 break;
                             case CF_DIB: {
@@ -245,6 +261,7 @@ namespace FrogLies {
                                     CloseClipboard();
                                     ClipClosed = true;
                                     void* d = b.ReadPNG();
+                                    SetParams(a.pass, a.show);
                                     Upload( "png", d, b.PNGLen(), "clip" );
                                 } break;
                             case CF_HDROP: {
@@ -296,6 +313,7 @@ namespace FrogLies {
                                         GlobalUnlock( hClipboardData );
                                         CloseClipboard();
                                         ClipClosed = true;
+                                        SetParams(a.pass, a.show);
                                         Upload( cmdline2 );
                                     }
                                     else {
@@ -304,6 +322,7 @@ namespace FrogLies {
                                         GlobalUnlock( hClipboardData );
                                         CloseClipboard();
                                         ClipClosed = true;
+                                        SetParams(a.pass, a.show);
                                         Upload( name );
                                     }
                                 } break;
@@ -340,7 +359,7 @@ namespace FrogLies {
 
     }
 
-    void DoUpload( int type, int x = -1, int y = -1, int w = -1, int h = -1 ) {
+    void DoUpload( int type, int x = -1, int y = -1, int w = -1, int h = -1, std::string pass = "", std::string show = "true" ) {
         _anupload a;
         if( w < 0 ) {
             x += w;
@@ -358,6 +377,19 @@ namespace FrogLies {
         a.d.y = y;
         a.d.w = w;
         a.d.h = h;
+        a.pass = pass;
+        a.show = show;
+        lock.Lock();
+        todouploads.push_back( a );
+        _beginthread( __uploadthread, 1000, 0 );
+        lock.Unlock();
+    }
+    void DoUpload( int type, std::string file, std::string pass = "", std::string show = "true" ) {
+        _anupload a;
+        a.t = type;
+        a.file = file;
+        a.pass = pass;
+        a.show = show;
         lock.Lock();
         todouploads.push_back( a );
         _beginthread( __uploadthread, 1000, 0 );
@@ -602,11 +634,17 @@ namespace FrogLies {
             std::string str;
             DWORD msg = 1;
             KBDLLHOOKSTRUCT st_hook = *( ( KBDLLHOOKSTRUCT* )lp );
-            msg += ( st_hook.scanCode << 16 );
-            msg += ( st_hook.flags << 24 );
-            msg += 1 << 25;
-            GetKeyNameText( msg, tmp, 0xFF );
-            str = std::string( tmp );
+            msg |= ( st_hook.scanCode << 16 );
+            msg |= ( st_hook.flags << 24 );
+            msg |= 0 << 25;
+            if( st_hook.vkCode == VK_RSHIFT ){
+                str = "Right Shift";
+            }
+            else{
+                int result = GetKeyNameText( msg, tmp, 0xFF );
+                int err = GetLastError();
+                str = std::string( tmp );
+            }
             for( unsigned int i = 0; i < str.length(); ++i ){
                 if( str[i] == ' ' )
                     str[i] = '-';
@@ -637,11 +675,17 @@ namespace FrogLies {
             std::string str;
             DWORD msg = 1;
             KBDLLHOOKSTRUCT st_hook = *( ( KBDLLHOOKSTRUCT* )lp );
-            msg += ( st_hook.scanCode << 16 );
-            msg += ( st_hook.flags << 24 );
-            msg += 1 << 25;
-            GetKeyNameText( msg, tmp, 0xFF );
-            str = std::string( tmp );
+            msg |= ( st_hook.scanCode << 16 );
+            msg |= ( st_hook.flags << 24 );
+            msg |= 0 << 25;
+            if( st_hook.vkCode == VK_RSHIFT ){
+                str = "Right Shift";
+            }
+            else{
+                int result = GetKeyNameText( msg, tmp, 0xFF );
+                int err = GetLastError();
+                str = std::string( tmp );
+            }
             for( unsigned int i = 0; i < str.length(); ++i ){
                 if( str[i] == ' ' )
                     str[i] = '-';
@@ -997,7 +1041,7 @@ UPLOADCROP:
         //printf("%s", str.c_str());
 
         #ifndef DEBUGGING
-        whff.Upload( str, data, datalen, GetMimeFromExt( type ) );
+        whff.Upload( str, data, datalen, GetMimeFromExt( type ), UploadPassword );
         #endif
 
         if ( copyLoc.length() > 0 ) {    //empty quotes to not copy...
@@ -1039,8 +1083,7 @@ UPLOADCROP:
 
         //printf("%s", str.c_str());
         Log( "Start Upload B" );
-
-        whff.Upload( fname );
+        whff.Upload( fname, UploadPassword );
 
         if ( copyLoc.length() > 0 ) {    //empty quotes to not copy...
             Log( "Copying..." );
@@ -1305,6 +1348,40 @@ std::vector<std::string> ParseCmdLine( const char* cmdline ) {
     free( buffer );
     return args;
 }
+#include <cctype>
+
+std::string UrlEncode(std::string input){
+	std::string ret = "";
+	char output = 0;
+	int readingCode = 0;
+	for (char c2 : input){
+		int c = c2;
+
+		bool escape = false;
+		if (c < '0' || c > 'z'){
+			escape = true;
+		}
+		else{
+			if (!isalnum(c)){
+				escape = true;
+			}
+		}
+		if (escape){
+			if (c == ' '){
+				ret += '+';
+			}
+			else{
+				char buffer[100];
+                snprintf(buffer,100, "%%%02x", (unsigned char)c);
+                ret += buffer;
+			}
+		}
+		else{
+			ret += c;
+		}
+	}
+	return ret;
+}
 
 int HandleArgs( const char* cmdline ) {
     std::vector< std::string > args = ParseCmdLine( cmdline );
@@ -1337,6 +1414,15 @@ int HandleArgs( const char* cmdline ) {
             DoUpload( UPLOAD_CLIP );
             SetClipboard( whff.GetLastUpload() );
         }
+        return 1;
+    }
+    if ( args[0] == "--file" ) {
+        SetParams(args[2], args[2]);
+        Upload(  args[1] );
+        std::string clip = whff.GetLastUpload();
+        clip += "?password=" + UrlEncode( args[2]);
+        printf("\n%s\n", clip.c_str());
+        SetClipboard( clip );
         return 1;
     }
     if ( args[0] == "--crop" ) {

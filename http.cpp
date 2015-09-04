@@ -251,6 +251,7 @@ int HTTP::processHeaders( char* buffer, size_t len ) {
         if( buffer[i] == '\r' && i < len + 1 && buffer[i + 1] == '\n' ) {
             buffer[i] = 0;
             i++;
+            printf("%s\n", prev);
             Headers.push_back( prev );
             prev = buffer + i + 1;
             if( i < len + 2 && buffer[i + 1] == '\r' && buffer[i + 2] == '\n' ) {
@@ -314,6 +315,46 @@ int HTTP::Post( void* data, size_t datalen ) {
         putchar( buffer[i] );
     }
     HTTP::dataoffset = processHeaders( buffer, bufpos );
+    if( GetHeader("Transfer-Encoding") == "chunked"){
+        printf("ayylmao");
+        bool foundRet = false;
+        size_t len = 0;
+        size_t offset = HTTP::dataoffset;
+        size_t end = HTTP::dataoffset;
+        size_t total_len = 0;
+        do{
+            len = 0;
+            size_t start = offset;
+            for( ;offset < bufpos; ++offset ){
+                if( buffer[offset] == '\r' ){
+                    foundRet = true;
+                }
+                else if(foundRet && buffer[offset] == '\n'){
+                    buffer[offset - 1] = 0;
+                    len = atoi(buffer + start);
+                    ++offset;
+                    break;
+                }
+                else{
+                    foundRet = false;
+                }
+            }
+            if( len + offset >= bufpos ){
+                if( offset >= bufpos ){
+                    len = 0;
+                }
+                else{
+                    len = bufpos - offset;
+                }
+            }
+            memmove(buffer + end, buffer + offset, len);
+            end += len;
+            total_len += len;
+            offset += len + 2;
+        } while( len != 0 );
+        bufpos = dataoffset + total_len;
+        buffer[bufpos] = 0;
+    }
 
     if( HTTP::data != 0 ) {
         free( HTTP::data );
@@ -367,7 +408,9 @@ static std::string TrimLeadingWhitespace( std::string in ) {
 std::string HTTP::GetHeader( std::string key ) {
     key = ToLower( key );
     for( unsigned int i = 0; i < Headers.size(); ++i ) {
+        printf("%s\n", ToLower( Headers[i] ).substr( 0, key.length() ).c_str());
         if( ToLower( Headers[i] ).substr( 0, key.length() ) == key ) {
+            printf("ret %s\n", TrimLeadingWhitespace( Headers[i].substr( key.length() + 1 ) ).c_str());
             return TrimLeadingWhitespace( Headers[i].substr( key.length() + 1 ) );
         }
     }
